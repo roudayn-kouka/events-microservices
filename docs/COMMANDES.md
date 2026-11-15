@@ -111,16 +111,41 @@ Variable utile : `L=http://localhost:8088/api/logistics`.
 | L6 | `curl -s $L/999 \| jq` | Logistique inconnue | `404`, `"message":"Logistics introuvable : 999"` (500 dans le monolithe) |
 | L7 | `make restart S=eureka-server` puis `make health` | Redémarrer un service en gardant la branche Git courante pour le Config Server | Toutes les applications se réinscrivent seules ; la Gateway route de nouveau |
 
+### event-service
+
+Variable utile : `V=http://localhost:8088/api/events`. EV2 enregistre l'identifiant dans `$EV`.
+
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| EV1 | `mvn -B -pl event-service -am install` | Compiler et tester | 65 tests verts |
+| EV2 | `EV=$(curl -s -X POST $V -H "Content-Type: application/json" -d '{"description":"Gala FST","dateDebut":"2026-12-10","dateFin":"2026-12-11","participantIds":[1]}' \| tee /dev/stderr \| jq -r .idEvent)` | Créer un événement (participant vérifié par Feign) | `201`, UUID, `"participantIds":[1]` |
+| EV3 | `curl -s -X POST $V/$EV/logistics -H "Content-Type: application/json" -d '{"description":"Chaises","reserve":true,"prixUnit":2.5,"quantite":100}' \| jq` | Créer la logistique dans logistics-service (Feign) et la rattacher | `201`, `{"idLog":4,…}` |
+| EV4 | `curl -s -X POST $V/$EV/logistics -H "Content-Type: application/json" -d '{"description":"Goodies","reserve":false,"prixUnit":4,"quantite":50}' \| jq -c` | Logistique non réservée | `"reserve":false` |
+| EV5 | `curl -s -X POST $V/cout/recalcul \| jq --arg ev "$EV" '.[] \| select(.idEvent==$ev) \| {description,cout,logisticsIds}'` | `calculCout` à la demande | `"cout": 250.0` (Goodies ignorés) |
+| EV6 | `curl -s $V/$EV/details \| jq` | Vue composée (3 services) | `participants` et `logistics` complets |
+| EV7 | `curl -s $V/logistics/2026-12-01/2026-12-31 \| jq -c 'map({idLog,description,reserve})'` | Ancien `getLogs` | Logistique réservée seulement |
+| EV8 | `curl -s -X POST $V -H "Content-Type: application/json" -d '{"description":"X","dateDebut":"2026-12-10","dateFin":"2026-12-11","participantIds":[99999]}' \| jq` | Participant inconnu | `404`, `"Participant not found with id [99999]"` |
+| EV9 | `curl -s -X POST $V -H "Content-Type: application/json" -d '{"description":"X","dateDebut":"2026-12-10","dateFin":"2026-12-01"}' \| jq .message` | Dates incohérentes | `400`, « La date de fin précède la date de début » |
+| EV10 | `docker compose stop participant-service; curl -s -X POST $V/$EV/participants/1 \| jq; curl -s -o /dev/null -w '%{http_code}\n' $V/$EV; make restart S=participant-service` | Panne du service appelé (avant Resilience4j) | `503` explicite ; la lecture simple répond `200` |
+| EV11 | `docker compose logs event-service \| grep scheduling-1 \| grep -E 'Cout de\|reporté' \| tail -3` | Exécution planifiée de `calculCout` (chaque minute) | `Cout de l'Event … est 250.0`, ou « calculCout reporté » pendant une panne |
+
 ## Postman
 
 | # | Commande | Rôle | Résultat |
 |---|---|---|---|
 | N1 | `python3 postman/generate.py` | Régénérer la collection et les environnements (local, AWS) | `postman/*.json` |
-| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | participant + logistics : 22 requêtes, 41 assertions, 0 échec |
+| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | participant + logistics + event : 38 requêtes, 73 assertions, 0 échec |
 | N3 | Postman → *Import* → `postman/events-microservices.postman_collection.json` et `postman/local.postman_environment.json` | Utiliser la collection dans Postman | Un dossier par service, avec le tableau des correspondances d'endpoints |
 
 ## Feign
-_Phase 2 : event-service et feedback-service._
+
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| F1 | `grep -rn '@FeignClient' */src/main/java` | Lister les clients Feign | `participant-service` et `logistics-service` (event-service) |
+| F2 | `curl -s localhost:8888/event-service/default/develop \| jq '.propertySources[].source \| with_entries(select(.key\|test("openfeign")))'` | Délais Feign servis par le Config Server | `connect-timeout` 2000, `read-timeout` 5000 |
+| F3 | Commande EV10 | Comportement d'un appel Feign vers un service arrêté | `503` « participant-service indisponible (pas de réponse) » |
+
+_feedback-service ajoute ses clients Feign à la suite de la phase 2._
 
 ## Axon (CQRS)
 _Phase 3._

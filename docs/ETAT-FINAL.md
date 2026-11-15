@@ -48,4 +48,28 @@ Résultat : `mvn verify` → **41 tests verts** dans participant-service (31 d'o
 
 Résultat : `mvn verify` → **29 tests verts** dans logistics-service (19 d'origine + 10 ajoutés).
 
+### event-service — origine `feature/event` (+ `feature/event-statistics`, `feature/participant`, `feature/feedback`)
+
+Toutes les classes d'origine sont **adaptées** : l'identifiant devient un UUID, et les repositories Participant et Logistics deviennent des clients Feign simulés.
+
+| Classe d'origine | Tests | Repris | Adaptés | Supprimés | Détail |
+|---|---:|---:|---:|---:|---|
+| `EventServicesMockTest` (feature/event) | 5 | 0 | 5 | 0 | JUnit 4 → 5, `int` → UUID, clients Feign simulés |
+| `EventServicesImplTest` (feature/event) | 4 | 0 | 4 | 0 | MySQL → H2, « id > 0 » → « id est un UUID » |
+| `EventServicesAffectationMockTest` (feature/event-statistics) | 10 | 0 | 9 | 1 | relations → ensembles d'ID. `addAffectLog` sauvegarde toujours l'événement (les ID sont dans `db_event`). Sans logistique : liste vide au lieu de `null`. Le coût réservé est calculé par logistics-service |
+| `EventServicesImplMockitoTest` (feature/feedback) | 10 | 0 | 10 | 0 | participant absent = 404 renvoyé par Feign ; `getStatus()` → `getStatusCode()` |
+| `EventRestControllerMockTest` (feature/participant) | 5 | 0 | 4 | 1 | fusionné avec la variante suivante (4 + 4 → 4 tests qui gardent les vérifications des deux) ; chemins `/events…`, 201, JSON avec ID |
+| `EventRestControllerMockTest` (feature/event-statistics) | 5 | 0 | 4 | 1 | voir ligne précédente |
+| `EventRestControllerMockitoTest` (feature/feedback) | 5 | 0 | 4 | 1 | `EventWriteRequest` → `EventRequest` ; le contrôleur renvoie un `EventDTO` |
+| `MapperTest` (partie Event, feature/participant) | 1 | 0 | 1 | 0 | `EventDTO` vide → `EventRequest` vide |
+| `DemoDataLoaderMockTest` (feature/event-statistics) | 2 | 0 | 0 | 2 | voir « Suppressions » |
+| **Total d'origine** | **47** | **0** | **41** | **6** | 41 tests d'origine → 37 méthodes (4 fusions) |
+| Ajoutés | | | | | 28 : `RemoteCall` 404/503 (4), service : UUID et dates (2), affectations par ID, détails, organisateur absent, panne (7), contrôleur : lecture, 404 `ApiError`, validation, mise à jour, suppression, détails, recalcul (9), `Mapper` (3), repository : `@ElementCollection`, doublon de description (3) |
+
+**Suppressions (6) et raisons :**
+- `testAddParticipant`, `addParticipant` (×2) et `addParticipantMapsRequestAndReturnsServiceResult` (4 tests) : la création d'un participant (`POST /event/addPart`) appartient désormais à participant-service, où elle est testée (`ParticipantServicesImplMockitoTest`, `ParticipantRestControllerMockitoTest`) ;
+- `DemoDataLoaderMockTest` (2 tests) : le `CommandLineRunner` du monolithe écrivait d'un coup dans les tables participant, logistique et événement. Avec une base par service, c'est impossible. Il est remplacé par `scripts/seed-demo.sh`, qui passe par la Gateway (EVT-42).
+
+Résultat : `mvn verify` → **65 tests verts** dans event-service (37 d'origine + 28 ajoutés), couverture JaCoCo **96 %** des instructions.
+
 _Les autres services sont ajoutés au fil de la phase 2._

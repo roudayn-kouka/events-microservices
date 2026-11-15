@@ -13,7 +13,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 |---|---|---|
 | 0 | Monorepo, POM parent, GitFlow, backlog JIRA, livrables | Terminée |
 | 1 | Socle : Config Server, Eureka, Gateway, MySQL, Docker Compose | Terminée |
-| 2 | Services métier + Feign | À venir |
+| 2 | Services métier + Feign | En cours : participant, logistics, event faits (3/5) |
 
 ## Prérequis
 
@@ -50,6 +50,10 @@ events-microservices/
 ├── config-server/          Configuration centralisée (Git + surcharges à chaud)
 ├── eureka-server/          Annuaire de services
 ├── api-gateway/            Point d'entrée : routes lb://, CORS
+├── common/                 Erreurs JSON communes (ApiError), en-tête X-Instance-Id
+├── participant-service/    Participants (8102, db_participant)
+├── logistics-service/      Logistique et coût réservé (8103, db_logistics)
+├── event-service/          Événements, Feign, calculCout (8101, db_event)
 ├── config-repo/            Configuration de référence (un YAML par service)
 ├── config-overrides/       Surcharges à chaud des scénarios de panne (non versionnées)
 ├── docker/mysql/init/      Création des bases et utilisateurs par service

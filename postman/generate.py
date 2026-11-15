@@ -85,6 +85,64 @@ SERVICES = [
              {"description": "Chaises", "reserve": True, "prixUnit": 10, "quantite": -3}, 400, None),
         ],
     },
+    {
+        "nom": "event-service",
+        "origine": "feature/event (Nour Mustapha), corrections de feature/feedback",
+        "correspondance": [
+            ("POST /events/event/addEvent", "POST /api/events (participantIds vérifiés par Feign)"),
+            ("POST /events/event/addEvent/{id}", "POST /api/events/participant/{idPart}"),
+            ("PUT /events/event/addAffectLog/{description}", "PUT /api/events/by-description/{description}/logistics"),
+            ("GET /events/event/getLogs/{d1}/{d2}", "GET /api/events/logistics/{d1}/{d2}"),
+            ("POST /events/event/addPart", "POST /api/participants (participant-service)"),
+            ("(aucune lecture)", "GET /api/events, GET /api/events/{id}"),
+            ("(nouveau, composition Feign)", "GET /api/events/{id}/details"),
+            ("(nouveau)", "PUT /api/events/{id}, DELETE /api/events/{id}"),
+            ("(nouveau)", "POST /api/events/{id}/participants/{idPart}"),
+            ("(nouveau)", "POST /api/events/{id}/logistics"),
+            ("calculCout @Scheduled 60 s", "idem + POST /api/events/cout/recalcul"),
+        ],
+        "requetes": [
+            ("Créer un événement de l'organisateur", "POST", "/api/events",
+             {"description": "Gala-FST-{{$timestamp}}", "dateDebut": "2026-12-10", "dateFin": "2026-12-11",
+              "participantIds": ["{{participantId}}"]}, 201,
+             "pm.collectionVariables.set('eventId', pm.response.json().idEvent);\n"
+             "pm.collectionVariables.set('eventDescription', pm.response.json().description);"),
+            ("Créer un événement pour un participant", "POST", "/api/events/participant/{{participantId2}}",
+             {"description": "Atelier-{{$timestamp}}", "dateDebut": "2026-12-20", "dateFin": "2026-12-20"}, 201,
+             "pm.collectionVariables.set('eventId2', pm.response.json().idEvent);"),
+            ("Lister les événements", "GET", "/api/events", None, 200, None),
+            ("Lire un événement", "GET", "/api/events/{{eventId}}", None, 200, None),
+            ("Inscrire un participant (Feign)", "POST", "/api/events/{{eventId}}/participants/{{participantId2}}",
+             None, 200,
+             "pm.test('Deux inscrits', () => pm.expect(pm.response.json().participantIds.length).to.eql(2));"),
+            ("Créer et rattacher une logistique (Feign)", "POST", "/api/events/{{eventId}}/logistics",
+             {"description": "Chaises", "reserve": True, "prixUnit": 2.5, "quantite": 100}, 201, None),
+            ("Rattacher par description (ancien addAffectLog)", "PUT",
+             "/api/events/by-description/{{eventDescription}}/logistics",
+             {"description": "Goodies", "reserve": False, "prixUnit": 4, "quantite": 50}, 200, None),
+            ("Recalculer le coût (calculCout via Feign)", "POST", "/api/events/cout/recalcul", None, 200,
+             "const ev = pm.response.json().find(e => e.idEvent === pm.collectionVariables.get('eventId'));\n"
+             "pm.test('Coût = 250 (réservé seulement)', () => pm.expect(ev.cout).to.eql(250));"),
+            ("Détails (3 services composés)", "GET", "/api/events/{{eventId}}/details", None, 200,
+             "pm.test('Participants et logistique lus par Feign', () => {\n"
+             "  pm.expect(pm.response.json().participants.length).to.eql(2);\n"
+             "  pm.expect(pm.response.json().logistics.length).to.eql(2);\n});"),
+            ("Logistique réservée de la période", "GET", "/api/events/logistics/2026-12-01/2026-12-31", None, 200,
+             "pm.test('Réservée seulement', () => pm.response.json().forEach(l => pm.expect(l.reserve).to.be.true));"),
+            ("Modifier un événement", "PUT", "/api/events/{{eventId2}}",
+             {"description": "Atelier Spring Cloud", "dateDebut": "2026-12-21", "dateFin": "2026-12-22"}, 200, None),
+            ("Supprimer un événement", "DELETE", "/api/events/{{eventId2}}", None, 204, None),
+            ("Erreur 404 : événement inconnu", "GET", "/api/events/00000000-0000-0000-0000-000000000000", None, 404,
+             None),
+            ("Erreur 404 : participant inconnu (Feign)", "POST", "/api/events",
+             {"description": "Fantome", "dateDebut": "2026-12-10", "dateFin": "2026-12-11",
+              "participantIds": [999999]}, 404, None),
+            ("Erreur 400 : date de fin avant la date de début", "POST", "/api/events",
+             {"description": "Inverse", "dateDebut": "2026-12-10", "dateFin": "2026-12-01"}, 400, None),
+            ("Erreur 400 : description vide (validation)", "POST", "/api/events",
+             {"description": "", "dateDebut": "2026-12-10", "dateFin": "2026-12-11"}, 400, None),
+        ],
+    },
 ]
 
 
@@ -132,7 +190,8 @@ collection = {
     },
     "item": [dossier(s) for s in SERVICES],
     "variable": [{"key": k, "value": "1"} for k in
-                 ("participantId", "participantId2", "logisticsId", "logisticsId2")],
+                 ("participantId", "participantId2", "logisticsId", "logisticsId2", "eventId", "eventId2",
+                  "eventDescription")],
 }
 
 

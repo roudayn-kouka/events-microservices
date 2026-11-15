@@ -1,0 +1,24 @@
+# Tests : ni Config Server ni Eureka ; base H2 ; calculCout planifié désactivé (« - »)
+spring:
+  application:
+    name: event-service
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:event;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+eureka:
+  client:
+    enabled: false
+events:
+  cout:
+    cron: "-"
+logging:
+  level:
+    root: warn

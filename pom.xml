@@ -32,6 +32,7 @@
         <!-- Services métier (phase 2) -->
         <module>participant-service</module>
         <module>logistics-service</module>
+        <module>event-service</module>
     </modules>
 
     <properties>
