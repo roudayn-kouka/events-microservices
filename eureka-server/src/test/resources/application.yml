@@ -1,0 +1,10 @@
+# Tests : remplace l'application.yml principal (pas de Config Server) et charge
+# directement la vraie configuration de config-repo/.
+spring:
+  application:
+    name: eureka-server
+  cloud:
+    config:
+      enabled: false
+  config:
+    import: "file:../config-repo/application.yml,file:../config-repo/eureka-server.yml"

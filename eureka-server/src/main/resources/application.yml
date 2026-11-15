@@ -1,0 +1,15 @@
+# Seul le nom et l'adresse du Config Server sont locaux ; le reste vient de config-repo/eureka-server.yml
+spring:
+  application:
+    name: eureka-server
+  config:
+    import: "configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      # Config Server indisponible (démarrage, redémarrage) : nouvelles tentatives, puis échec net
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 10000
+        max-attempts: 20

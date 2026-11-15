@@ -1,0 +1,12 @@
+server:
+  port: 8761
+
+eureka:
+  client:
+    # Le serveur ne s'enregistre pas auprès de lui-même
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    # Environnement de démonstration : une instance arrêtée disparaît vite du registre
+    enable-self-preservation: false
+    eviction-interval-timer-in-ms: 5000

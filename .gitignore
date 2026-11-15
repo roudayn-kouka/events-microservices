@@ -38,6 +38,9 @@ secrets/
 **/vault.yml
 **/.vault_pass
 
+# Surcharges de configuration à chaud (scripts de panne)
+config-overrides/*.yml
+
 # Rapports générés
 trivy-*.txt
 gitleaks-report.json

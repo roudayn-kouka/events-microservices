@@ -9,10 +9,11 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 3 | Architecture | Diagramme (README), ports, profils Docker Compose | — |
 | 4 | Git et JIRA | GitFlow, commits EVT-xx, backlog importé | C1, C2 |
 | 5 | Maven et versions | POM parent, Boot 3.5.16 / Cloud 2025.0.3 / Axon 4.13.3, justification | C3, C4 |
-| 6 | Config Server | config-repo Git, un YAML par service | _phase 1_ |
-| 7 | Eureka | Services enregistrés, 2 instances | _phase 1_ |
-| 8 | API Gateway | Routes `lb://`, CORS, sécurité | _phase 1_ |
-| 9 | MySQL | Une base et un utilisateur par service | _phase 1_ |
+| 6 | Config Server | `config-repo/` versionné dans Git (un YAML par service + `application.yml` commun) ; profil `composite` avec surcharges à chaud ; le serveur lit le contenu commité (preuve C5) ; piège `file:` (THEORIE Q4). Commandes C2 à C5 | C7, C8, C9 |
+| 7 | Eureka | Enregistrement et battements de cœur toutes les 5 s, retrait après 15 s ; tableau de bord ; registre JSON. Commandes E1, E2 | C10 |
+| 8 | API Gateway | Routes `lb://` (extrait de `api-gateway.yml`), `StripPrefix`, CORS Angular (200 contre 403), 503 sans instance, routes en lecture seule. Commandes W1 à W5 | C11, C12 |
+| 9 | MySQL | Une base et un utilisateur par service (script d'initialisation), isolation prouvée par `ERROR 1044`, port 3307. Commandes S1 à S3 | C13 |
+| 9 bis | Docker Compose du socle | Healthchecks, `depends_on: service_healthy`, `.env` généré, `make up` / `make health`, redémarrage tolérant (fail-fast + retry). Commandes D1 à D6 et C6 | C5, C6, C14 |
 | 10 | Services et Feign | Relations JPA remplacées par des ID et des appels Feign | _phase 2_ |
 | 11 | **CQRS Axon (mon module)** | Agrégat, commandes, projections dans statistics-service, replay | _phase 3_ |
 | 12 | Résilience4j | Configuration, fallbacks, 5 pannes | _phase 4_ |
