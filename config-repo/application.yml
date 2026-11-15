@@ -9,6 +9,8 @@ eureka:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
     registry-fetch-interval-seconds: 5
+    # Premier enregistrement 5 s après le démarrage (40 s par défaut)
+    initial-instance-info-replication-interval-seconds: 5
   instance:
     prefer-ip-address: true
     # Identifiant lisible dans Eureka et dans l'en-tête X-Instance-Id : <service>:<instance>

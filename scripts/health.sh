@@ -30,7 +30,12 @@ controle "Config Server sert api-gateway.yml (config-repo)" sert_config api-gate
 controle "Eureka UP (8761)"                            est_up http://localhost:8761/actuator/health
 controle "API Gateway UP (8088)"                       est_up http://localhost:8088/actuator/health
 
-apps="$(apps_eureka)"
+# Un service s'enregistre quelques secondes après son démarrage : on patiente jusqu'à 60 s
+for _ in $(seq 1 12); do
+  apps="$(apps_eureka)"
+  [[ "$apps" == *API-GATEWAY* ]] && break
+  sleep 5
+done
 controle "Eureka : ${apps:-registre vide}"             test -n "$apps"
 
 bases="$(bases_mysql)"
