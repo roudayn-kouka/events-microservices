@@ -112,4 +112,11 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Solutions** : un verrou partagé (ShedLock, avec une table de verrous dans `db_event`), une seule instance « planificatrice » (propriété `events.cout.cron: "-"` sur les autres, via le Config Server), ou un ordonnanceur externe qui appelle `POST /api/events/cout/recalcul`.
 - **Dans ce projet** : event-service n'a qu'une instance (les 2 instances concernent participant-service et statistics-service). Le cron est réglable dans `config-repo/event-service.yml`, et le déclenchement manuel sert à la démonstration. En test, il est désactivé (`"-"`).
 
+### Q13. Comment garantir un seul avis par participant, même avec deux requêtes simultanées ?
+
+- **La vérification applicative ne suffit pas** : `existsByEventIdAndParticipantId` puis `save` est un « vérifier puis agir ». Deux requêtes simultanées peuvent passer toutes les deux la vérification avant que l'une n'écrive. C'est encore plus probable avec plusieurs instances du service.
+- **La garantie vient de la base** : la contrainte d'unicité `uk_feedback_event_participant (event_id, participant_id)` de `db_feedback`. Le service écrit avec `saveAndFlush` dans sa transaction : la violation arrive avant la réponse. Elle est traduite en **409**, et seulement si c'est bien cette contrainte (les autres erreurs de base ne sont pas maquillées en doublon).
+- **Preuve** : `FeedbackConcurrencyIntegrationTest` lance deux requêtes en même temps et obtient toujours exactement un `201` et un `409`.
+- **Ce qui a changé avec les microservices** : la contrainte reste locale, car les deux colonnes sont dans `db_feedback`. En revanche, la clé étrangère vers l'événement n'existe plus : l'existence de l'événement est vérifiée par Feign au moment de l'écriture (Q10).
+
 _Les questions suivantes sont ajoutées au fil des phases : CQRS vs CRUD, event sourcing, états du circuit breaker, Gateway vs LoadBalancer, tracing, Terraform…_

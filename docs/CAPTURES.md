@@ -50,4 +50,13 @@ Pour chaque capture : ce qu'il faut ouvrir, et ce qui doit être visible.
 - [ ] **C29 — Panne d'un service appelé (AVANT Resilience4j)** : terminal, commande EV10. Visible : `503` « participant-service indisponible », alors que `GET /api/events/{id}` répond toujours `200`. À refaire à la phase 4 pour comparer avec le fallback.
 - [ ] **C30 — Postman** : dossier `event-service` (tableau des correspondances) et Newman : 38 requêtes, 73 assertions, 0 échec.
 
+### feedback-service
+
+- [ ] **C31 — feedback-service dans Eureka** : `make health`. Visible : `feedback-service : UP dans Eureka` et `répond via la Gateway`, plus les 6 applications dans le registre.
+- [ ] **C32 — Les règles métier via la Gateway** : terminal, commandes FB2 à FB5. Visible : `201`, puis `409` (deuxième avis), `400` (non inscrit), `400` (pas terminé).
+- [ ] **C33 — Validation et vérifications Feign** : terminal, commandes FB6 et FB7. Visible : note 6 → `details`, note 1.5 → 400 ; événement ou participant inconnu → 404 renvoyé par Feign.
+- [ ] **C34 — Moyennes** : terminal, commande FB8. Visible : la moyenne de l'événement et `GET /api/feedback/moyennes`, source de statistics-service.
+- [ ] **C35 — Panne d'event-service (AVANT Resilience4j)** : terminal, commande FB9. Visible : `503` pour un nouvel avis, mais `/moyennes` répond `200` (lecture locale). À comparer à la phase 4.
+- [ ] **C36 — Postman** : dossier `feedback-service` et Newman : 53 requêtes, 97 assertions, 0 échec.
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._
