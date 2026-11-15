@@ -8,7 +8,7 @@ BRANCHE   := $(shell git branch --show-current)
 PROFILES  ?= --profile core
 
 .DEFAULT_GOAL := help
-.PHONY: help env build up down ps logs health
+.PHONY: help env build up restart down ps logs health
 
 help: ## Liste des commandes
 	@awk -F ':.*## ' '/^[a-z-]+:.*## / { printf "  make %-8s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -22,6 +22,10 @@ build: ## Compile et teste tous les modules (mvn verify)
 up: env ## Construit les images et démarre la stack (attend que tout soit « healthy »)
 	@if ! git diff --quiet HEAD -- config-repo; then echo "Attention : config-repo/ a des modifications non commitées, le Config Server ne les verra pas."; fi
 	CONFIG_GIT_LABEL=$(BRANCHE) $(COMPOSE) $(PROFILES) up -d --build --wait
+
+restart: ## Recrée un service en gardant la branche Git courante : make restart S=logistics-service
+	@test -n "$(S)" || { echo "Préciser le service : make restart S=<service>"; exit 1; }
+	CONFIG_GIT_LABEL=$(BRANCHE) $(COMPOSE) $(PROFILES) up -d --force-recreate --wait $(S)
 
 down: ## Arrête la stack (les volumes de données sont conservés)
 	$(COMPOSE) --profile '*' down

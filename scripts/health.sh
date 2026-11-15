@@ -50,6 +50,11 @@ controle "Config Server sert api-gateway.yml (config-repo)" sert_config api-gate
 controle "Eureka UP (8761)"                                 est_up http://localhost:8761/actuator/health
 controle "API Gateway UP (8088)"                            est_up http://localhost:8088/actuator/health
 
+for socle in config-server api-gateway; do
+  for _ in $(seq 1 12); do enregistre "$socle" && break; sleep 5; done
+  controle "$socle : UP dans Eureka"                        enregistre "$socle"
+done
+
 bases="$(bases_mysql)"
 controle "MySQL : ${bases:-aucune base db_*}"               grep -q db_stats <<<"$bases"
 

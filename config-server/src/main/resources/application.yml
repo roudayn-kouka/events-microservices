@@ -26,12 +26,18 @@ spring:
             clone-on-start: true
             force-pull: true
 
+# Mêmes délais courts que config-repo/application.yml (le Config Server ne lit pas config-repo
+# pour lui-même) : réinscription en 5 s si Eureka redémarre (30 s par défaut).
 eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    initial-instance-info-replication-interval-seconds: 5
   instance:
     prefer-ip-address: true
+    instance-id: ${spring.application.name}:${INSTANCE_ID:${random.value}}
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
 
 management:
   endpoints:

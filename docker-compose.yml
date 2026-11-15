@@ -123,5 +123,22 @@ services:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8102/actuator/health | grep -q '\"status\":\"UP\"'"]
 
+  logistics-service:
+    <<: *spring-service
+    build: ./logistics-service
+    image: events/logistics-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: logistics-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      LOGISTICS_DB_PASSWORD: ${LOGISTICS_DB_PASSWORD}
+    ports: ["8103:8103"]
+    depends_on: *depends-socle
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8103/actuator/health | grep -q '\"status\":\"UP\"'"]
+
 volumes:
   mysql-data:

@@ -95,3 +95,48 @@ eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tach
 @GetMapping("/search")
 public List<ParticipantDTO> search(@RequestParam String nom, @RequestParam String prenom, @RequestParam Tache tache)
 ```
+
+### logistics-service (port 8103, base `db_logistics`)
+
+- **Branche d'origine** : `feature/logistics` (Ahlem Mastouri). Le DTO et la partie logistique du `Mapper` viennent de `feature/participant` (Farah).
+- **Changements** :
+  - l'entité ne change pas. C'est le **côté événement** qui perd sa relation `@OneToMany Set<Logistics>` : event-service gardera les identifiants (`event_logistics`) ;
+  - « logistique introuvable » renvoie **404 au lieu de 500**. Le monolithe levait `IllegalArgumentException` : un appelant Feign ne pouvait pas distinguer une logistique inexistante d'une panne du service ;
+  - le contrôleur expose des DTO validés (`@NotBlank`, `@PositiveOrZero`) au lieu de l'entité JPA ;
+  - deux endpoints sont ajoutés pour event-service : la lecture par lot (`?ids=`) et le coût réservé d'un ensemble (`/cout-reserve`).
+- **Tests** : 19 d'origine (18 repris, 1 adapté, 0 supprimé) et 10 ajoutés, soit 29 au total (détail dans `ETAT-FINAL.md`).
+
+| Monolithe (`/events`, port 8089) | Microservices (via la Gateway, port 8088) |
+|---|---|
+| `POST /events/logistics` | `POST /api/logistics` (201) |
+| `PUT /events/logistics` | `PUT /api/logistics` |
+| `GET /events/logistics` | `GET /api/logistics` |
+| `GET /events/logistics/{id}` | `GET /api/logistics/{id}` (404 si introuvable ; 500 avant) |
+| `DELETE /events/logistics/{id}` | `DELETE /api/logistics/{id}` (204) |
+| `GET /events/logistics/reserved` | `GET /api/logistics/reserved` |
+| `GET /events/logistics/{id}/cout` | `GET /api/logistics/{id}/cout` |
+| — | `GET /api/logistics?ids=1,2` (lecture par lot, Feign) |
+| — | `GET /api/logistics/cout-reserve?ids=1,2` (calculCout) |
+
+**Avant / après : l'erreur « introuvable ».**
+
+```java
+// AVANT — monolithe (feature/logistics) : HTTP 500 pour une simple logistique inexistante
+return logisticsRepository.findById(idLog)
+        .orElseThrow(() -> new IllegalArgumentException("Logistics introuvable : " + idLog));
+
+// APRÈS — logistics-service : 404 explicite ; l'appelant Feign sait que ce n'est pas une panne
+return logisticsRepository.findById(idLog)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Logistics introuvable : " + idLog));
+```
+
+**Avant / après : le coût de la logistique réservée d'un événement.**
+
+```java
+// AVANT — calculCout (feature/event) parcourt la relation JPA dans la même base
+for (Logistics l : event.getLogistics()) { if (l.isReserve()) somme += l.getPrixUnit() * l.getQuantite(); }
+
+// APRÈS — logistics-service calcule à partir des ID que lui transmet event-service (Feign)
+@GetMapping("/cout-reserve")
+public float getCoutReserve(@RequestParam("ids") List<Integer> ids)
+```
