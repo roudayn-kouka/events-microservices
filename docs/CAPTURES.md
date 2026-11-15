@@ -41,4 +41,13 @@ Pour chaque capture : ce qu'il faut ouvrir, et ce qui doit être visible.
 - [ ] **C23 — Reprise après redémarrage d'Eureka** : terminal, commande L7. Visible : `make health` tout vert et les 4 applications dans le registre.
 - [ ] **C24 — Postman** : dossier `logistics-service` (tableau des correspondances) et Newman : 22 requêtes, 0 échec.
 
+### event-service
+
+- [ ] **C25 — event-service dans Eureka** : `http://localhost:8761` et `make health`. Visible : `EVENT-SERVICE` UP, et `event-service : répond via la Gateway`.
+- [ ] **C26 — Création avec Feign** : terminal, commandes EV2 à EV4. Visible : `201`, l'UUID, `participantIds: [1]`, puis la logistique créée dans logistics-service et rattachée par son ID.
+- [ ] **C27 — calculCout via Feign** : terminal, commande EV5, puis EV11. Visible : `"cout": 250.0`, puis la ligne `[scheduling-1] … Cout de l'Event … est 250.0` (exécution planifiée).
+- [ ] **C28 — Vue composée** : terminal, commande EV6. Visible : un événement de `db_event`, avec ses participants (participant-service) et sa logistique (logistics-service).
+- [ ] **C29 — Panne d'un service appelé (AVANT Resilience4j)** : terminal, commande EV10. Visible : `503` « participant-service indisponible », alors que `GET /api/events/{id}` répond toujours `200`. À refaire à la phase 4 pour comparer avec le fallback.
+- [ ] **C30 — Postman** : dossier `event-service` (tableau des correspondances) et Newman : 38 requêtes, 73 assertions, 0 échec.
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._

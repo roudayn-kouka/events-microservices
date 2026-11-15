@@ -89,4 +89,27 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Un second cache, côté client** : Spring Cloud LoadBalancer (Gateway et Feign) garde la liste des instances **35 s** par défaut. Constaté à la phase 2 : après un redémarrage d'Eureka, les services étaient de nouveau UP dans le registre, mais la Gateway répondait encore 503 pendant ce délai. Réglé à **5 s** (`spring.cloud.loadbalancer.cache.ttl`, `config-repo/application.yml`). En production, on garderait un cache plus long (moins d'appels à Eureka), compensé par Retry et CircuitBreaker.
 - **Le Config Server ne lit pas `config-repo/` pour lui-même** : ses délais Eureka sont donc fixés dans son propre `application.yml`. Sans cela, il mettait 30 s à se réinscrire après un redémarrage d'Eureka.
 
+## Communication entre services
+
+### Q10. Comment remplace-t-on une relation JPA quand les deux entités sont dans deux services ?
+
+- **Le constat** : `Event` avait `@ManyToMany Set<Participant>` et `@OneToMany Set<Logistics>`. Avec une base par service (Q7), une jointure SQL entre `db_event` et `db_participant` est impossible, et une clé étrangère entre deux bases aussi.
+- **La solution retenue** : l'événement garde seulement les **identifiants** (`@ElementCollection Set<Integer> participantIds`, table `event_participant` dans `db_event`). Quand il faut les objets, event-service les demande à leur propriétaire par **OpenFeign**, en un seul appel par lot (`GET /participants?ids=1,2`), et non un appel par ID (le problème « N+1 » à travers le réseau).
+- **Ce qu'on perd** : l'intégrité référentielle. Un participant supprimé laisse un ID orphelin dans `event_participant`. Ici, l'existence est vérifiée **à l'écriture** (Feign → 404). En production, on ajouterait des **événements de domaine** (« ParticipantSupprimé » → event-service retire l'ID), ce que la phase 6 (Axon) prépare.
+- **Pourquoi le calcul du coût réservé est dans logistics-service** : la règle (« réservé seulement », prix × quantité) appartient à la logistique. event-service transmet les ID et reçoit une somme. Un seul appel par événement, et aucune logique de logistique dupliquée.
+
+### Q11. Que se passe-t-il quand participant-service est arrêté ?
+
+- **Démarrage** : event-service n'a pas de `depends_on` sur participant-service ni sur logistics-service. Il démarre, s'inscrit dans Eureka et sert ses lectures. Un service métier absent ne bloque pas les autres (couplage faible).
+- **Lecture simple** (`GET /api/events/{id}`) : elle ne lit que `db_event` et répond `200`.
+- **Opération qui appelle participant-service** : Feign ne trouve pas d'instance, ou la connexion est refusée. `RemoteCall` répond un **503 explicite** (« participant-service indisponible (pas de réponse) »), au lieu d'un 500 avec une trace Java. Un 404 distant reste un 404 : l'appelant distingue « n'existe pas » de « ne répond pas ».
+- **`calculCout` planifié** : l'exécution est journalisée « calculCout reporté », et la suivante (une minute plus tard) rattrape le calcul.
+- **Phase 4 (Resilience4j)** : Retry (3 essais à 500 ms) pour une coupure brève, CircuitBreaker pour cesser d'appeler un service en panne, TimeLimiter (5 s) contre un service lent, et des **fallbacks** explicites. La capture C29 (avant) sera comparée à celle de la phase 4 (après).
+
+### Q12. `calculCout` est planifié toutes les minutes : que se passe-t-il avec deux instances d'event-service ?
+
+- Chaque instance a son propre `@Scheduled` : le calcul s'exécuterait **deux fois** par minute. Le résultat reste juste, car le calcul est **idempotent** (il recalcule la somme et ne l'additionne pas), mais le travail est doublé et les écritures concurrentes sont possibles.
+- **Solutions** : un verrou partagé (ShedLock, avec une table de verrous dans `db_event`), une seule instance « planificatrice » (propriété `events.cout.cron: "-"` sur les autres, via le Config Server), ou un ordonnanceur externe qui appelle `POST /api/events/cout/recalcul`.
+- **Dans ce projet** : event-service n'a qu'une instance (les 2 instances concernent participant-service et statistics-service). Le cron est réglable dans `config-repo/event-service.yml`, et le déclenchement manuel sert à la démonstration. En test, il est désactivé (`"-"`).
+
 _Les questions suivantes sont ajoutées au fil des phases : CQRS vs CRUD, event sourcing, états du circuit breaker, Gateway vs LoadBalancer, tracing, Terraform…_

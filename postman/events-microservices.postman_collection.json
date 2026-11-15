@@ -775,6 +775,571 @@
           }
         }
       ]
+    },
+    {
+      "name": "event-service",
+      "description": "**event-service** — repris de `feature/event (Nour Mustapha), corrections de feature/feedback`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/event/addEvent` | `POST /api/events (participantIds vérifiés par Feign)` |\n| `POST /events/event/addEvent/{id}` | `POST /api/events/participant/{idPart}` |\n| `PUT /events/event/addAffectLog/{description}` | `PUT /api/events/by-description/{description}/logistics` |\n| `GET /events/event/getLogs/{d1}/{d2}` | `GET /api/events/logistics/{d1}/{d2}` |\n| `POST /events/event/addPart` | `POST /api/participants (participant-service)` |\n| `(aucune lecture)` | `GET /api/events, GET /api/events/{id}` |\n| `(nouveau, composition Feign)` | `GET /api/events/{id}/details` |\n| `(nouveau)` | `PUT /api/events/{id}, DELETE /api/events/{id}` |\n| `(nouveau)` | `POST /api/events/{id}/participants/{idPart}` |\n| `(nouveau)` | `POST /api/events/{id}/logistics` |\n| `calculCout @Scheduled 60 s` | `idem + POST /api/events/cout/recalcul` |",
+      "item": [
+        {
+          "name": "Créer un événement de l'organisateur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('eventId', pm.response.json().idEvent);\npm.collectionVariables.set('eventDescription', pm.response.json().description);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Gala-FST-{{$timestamp}}\",\n  \"dateDebut\": \"2026-12-10\",\n  \"dateFin\": \"2026-12-11\",\n  \"participantIds\": [\n    \"{{participantId}}\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Créer un événement pour un participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('eventId2', pm.response.json().idEvent);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events/participant/{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "participant",
+                "{{participantId2}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Atelier-{{$timestamp}}\",\n  \"dateDebut\": \"2026-12-20\",\n  \"dateFin\": \"2026-12-20\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Lister les événements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inscrire un participant (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Deux inscrits', () => pm.expect(pm.response.json().participantIds.length).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId}}/participants/{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId}}",
+                "participants",
+                "{{participantId2}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Créer et rattacher une logistique (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId}}/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId}}",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Chaises\",\n  \"reserve\": true,\n  \"prixUnit\": 2.5,\n  \"quantite\": 100\n}"
+            }
+          }
+        },
+        {
+          "name": "Rattacher par description (ancien addAffectLog)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events/by-description/{{eventDescription}}/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "by-description",
+                "{{eventDescription}}",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Goodies\",\n  \"reserve\": false,\n  \"prixUnit\": 4,\n  \"quantite\": 50\n}"
+            }
+          }
+        },
+        {
+          "name": "Recalculer le coût (calculCout via Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "const ev = pm.response.json().find(e => e.idEvent === pm.collectionVariables.get('eventId'));\npm.test('Coût = 250 (réservé seulement)', () => pm.expect(ev.cout).to.eql(250));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/cout/recalcul",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "cout",
+                "recalcul"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Détails (3 services composés)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Participants et logistique lus par Feign', () => {\n  pm.expect(pm.response.json().participants.length).to.eql(2);\n  pm.expect(pm.response.json().logistics.length).to.eql(2);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId}}/details",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId}}",
+                "details"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logistique réservée de la période",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Réservée seulement', () => pm.response.json().forEach(l => pm.expect(l.reserve).to.be.true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/logistics/2026-12-01/2026-12-31",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "logistics",
+                "2026-12-01",
+                "2026-12-31"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId2}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Atelier Spring Cloud\",\n  \"dateDebut\": \"2026-12-21\",\n  \"dateFin\": \"2026-12-22\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Supprimer un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId2}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : événement inconnu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : participant inconnu (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Fantome\",\n  \"dateDebut\": \"2026-12-10\",\n  \"dateFin\": \"2026-12-11\",\n  \"participantIds\": [\n    999999\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : date de fin avant la date de début",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Inverse\",\n  \"dateDebut\": \"2026-12-10\",\n  \"dateFin\": \"2026-12-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : description vide (validation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"\",\n  \"dateDebut\": \"2026-12-10\",\n  \"dateFin\": \"2026-12-11\"\n}"
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -792,6 +1357,18 @@
     },
     {
       "key": "logisticsId2",
+      "value": "1"
+    },
+    {
+      "key": "eventId",
+      "value": "1"
+    },
+    {
+      "key": "eventId2",
+      "value": "1"
+    },
+    {
+      "key": "eventDescription",
       "value": "1"
     }
   ]

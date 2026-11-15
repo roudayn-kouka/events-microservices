@@ -140,3 +140,75 @@ for (Logistics l : event.getLogistics()) { if (l.isReserve()) somme += l.getPrix
 @GetMapping("/cout-reserve")
 public float getCoutReserve(@RequestParam("ids") List<Integer> ids)
 ```
+
+### event-service (port 8101, base `db_event`)
+
+- **Branche d'origine** : `feature/event` (Nour Mustapha). Les corrections de `feature/feedback` sont reprises : participant introuvable → 404, participants obligatoires → 400, `getLogisticsDates` ne renvoie plus `null`. Les tests viennent aussi de `feature/event-statistics` et `feature/participant`.
+- **Changements** :
+  - identifiant `int` → **UUID `String`**, prêt pour l'agrégat Axon de la phase 6 (THEORIE Q1) ;
+  - les relations `@ManyToMany(mappedBy = "events") Set<Participant>` et `@OneToMany Set<Logistics>` deviennent des **ensembles d'ID** (`@ElementCollection Set<Integer> participantIds / logisticsIds`, tables `event_participant` et `event_logistics` dans `db_event`) ;
+  - les accès directs à `ParticipantRepository` et `LogisticsRepository` (autres bases) sont remplacés par **deux clients OpenFeign** (`participant-service`, `logistics-service`, résolus par Eureka). `RemoteCall` traduit les erreurs : 404 distant → 404, service en panne → **503 explicite** (avant Resilience4j, phase 4) ;
+  - `calculCout` : la jointure JPA `findByParticipants_Nom…` devient une recherche Feign de l'organisateur, puis un appel Feign `cout-reserve` par événement. Le cron est réglable dans `config-repo/event-service.yml`, et un déclenchement manuel `POST /events/cout/recalcul` est ajouté ;
+  - `addParticipant` (créer un participant) quitte ce service : c'est le rôle de participant-service ;
+  - ajouts : lecture, mise à jour, suppression, inscription par ID, et une vue composée `GET /events/{id}/details` (3 services) ;
+  - `findByDescription` → `findFirstByDescription` : dans le monolithe, deux événements de même description faisaient échouer `addAffectLog` (HTTP 500).
+- **Tests** : 47 d'origine. 41 sont conservés (33 adaptés un pour un, 8 fusionnés en 4) et 6 supprimés, avec raison ; 28 sont ajoutés, soit **65 au total** (détail dans `ETAT-FINAL.md`).
+
+| Monolithe (`/events`, port 8089) | Microservices (via la Gateway, port 8088) |
+|---|---|
+| `POST /events/event/addEvent` | `POST /api/events` (201, `participantIds` vérifiés par Feign) |
+| `POST /events/event/addEvent/{id}` | `POST /api/events/participant/{idPart}` (201) |
+| `PUT /events/event/addAffectLog/{description}` | `PUT /api/events/by-description/{description}/logistics` |
+| `GET /events/event/getLogs/{d1}/{d2}` | `GET /api/events/logistics/{d1}/{d2}` |
+| `POST /events/event/addPart` | `POST /api/participants` (participant-service) |
+| — (aucune lecture) | `GET /api/events`, `GET /api/events/{id}` |
+| — | `GET /api/events/{id}/details` (participants + logistique par Feign) |
+| — | `PUT /api/events/{id}`, `DELETE /api/events/{id}` (204) |
+| — | `POST /api/events/{id}/participants/{idPart}` |
+| — | `POST /api/events/{id}/logistics` (201, créée dans logistics-service) |
+| `calculCout` toutes les 60 s | idem (cron configurable) + `POST /api/events/cout/recalcul` |
+
+**Avant / après : l'entité.**
+
+```java
+// AVANT — monolithe (feature/event) : objets d'une autre table, dans la même base
+@ManyToMany(mappedBy = "events")
+Set<Participant> participants;
+@OneToMany(fetch = FetchType.EAGER)
+Set<Logistics> logistics;
+
+// APRÈS — event-service : seulement des identifiants ; les objets sont dans d'autres bases
+@ElementCollection(fetch = FetchType.EAGER)
+@CollectionTable(name = "event_participant", joinColumns = @JoinColumn(name = "event_id"))
+@Column(name = "participant_id")
+Set<Integer> participantIds = new HashSet<>();
+```
+
+**Avant / après : inscrire un participant.**
+
+```java
+// AVANT — lecture directe d'une autre table ; NullPointerException si le participant n'existe pas
+Participant participant = participantRepository.findById(idParticipant).orElse(null);
+if (participant.getEvents() == null) { … participant.setEvents(events); } else { participant.getEvents().add(event); }
+return eventRepository.save(event);
+
+// APRÈS — existence vérifiée par Feign (404 distant → 404 ; panne → 503), puis ajout de l'ID
+RemoteCall.call("participant-service", "Participant not found with id " + idParticipant,
+        () -> participantClient.getParticipant(idParticipant));
+participantIds(event).add(idParticipant);
+return addEvent(event);
+```
+
+**Avant / après : `calculCout`.**
+
+```java
+// AVANT — une jointure JPA sur trois tables de la même base, puis une boucle sur la logistique
+List<Event> events = eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache(
+        "Tounsi", "Ahmed", Tache.ORGANISATEUR);
+for (Logistics l : event.getLogistics()) if (l.isReserve()) somme += l.getPrixUnit() * l.getQuantite();
+
+// APRÈS — 1) Feign : qui est l'organisateur ? 2) db_event : ses événements 3) Feign : coût réservé
+Set<Integer> organisateurs = participantClient.search("Tounsi", "Ahmed", "ORGANISATEUR")…;
+List<Event> events = eventRepository.findDistinctByParticipantIdsIn(organisateurs);
+float somme = ids.isEmpty() ? 0f : logisticsClient.coutReserve(ids);   // aucun appel si pas de logistique
+```

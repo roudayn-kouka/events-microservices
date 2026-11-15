@@ -140,5 +140,24 @@ services:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8103/actuator/health | grep -q '\"status\":\"UP\"'"]
 
+  # Appelle participant-service et logistics-service par Feign (lb://) : pas de depends_on sur
+  # eux, un service métier absent donne un 503 explicite, il ne bloque pas le démarrage.
+  event-service:
+    <<: *spring-service
+    build: ./event-service
+    image: events/event-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: event-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      EVENT_DB_PASSWORD: ${EVENT_DB_PASSWORD}
+    ports: ["8101:8101"]
+    depends_on: *depends-socle
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8101/actuator/health | grep -q '\"status\":\"UP\"'"]
+
 volumes:
   mysql-data:
