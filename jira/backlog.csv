@@ -35,10 +35,10 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 34,33,Task,Reprise des tests logistique,Tests de feature/logistics adaptés,High,tests,2,Done
 35,4,Story,event-service : lecture et affectations,"GET liste et détail (absents du monolithe), affectations participant/logistique (branche de Nour)",Highest,services,3,Done
 36,35,Task,Reprise des tests événements,Tests de feature/event adaptés,High,tests,2,Done
-37,4,Story,feedback-service,"Notes 1 à 5, unicité, événement terminé, participant inscrit (branche d'Emna)",Highest,services,3,To Do
-38,37,Task,Reprise des tests feedback,"126 tests de feature/feedback, dont la concurrence et le repository",High,tests,2,To Do
+37,4,Story,feedback-service,"Notes 1 à 5, unicité, événement terminé, participant inscrit (branche d'Emna)",Highest,services,3,Done
+38,37,Task,Reprise des tests feedback,"126 tests de feature/feedback, dont la concurrence et le repository",High,tests,2,Done
 39,5,Story,Feign depuis event-service,"Vers participant-service (existence, recherche) et logistics-service (création, coût)",Highest,feign,3,Done
-40,5,Story,Feign depuis feedback-service,"Vérifie l'événement (existence, inscription, date de fin) et le participant",Highest,feign,2,To Do
+40,5,Story,Feign depuis feedback-service,"Vérifie l'événement (existence, inscription, date de fin) et le participant",Highest,feign,2,Done
 41,39,Task,calculCout via Feign,Recalcul planifié du coût des événements par appel à logistics-service,High,feign,2,Done
 42,4,Task,Script de données de démonstration,scripts/seed-demo.sh : jeu de données créé par les API via la Gateway,Medium,services,1,To Do
 43,8,Story,Axon Server en conteneur,Event store et bus de messages ; interface sur 8024,Highest,axon,1,To Do

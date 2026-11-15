@@ -212,3 +212,50 @@ Set<Integer> organisateurs = participantClient.search("Tounsi", "Ahmed", "ORGANI
 List<Event> events = eventRepository.findDistinctByParticipantIdsIn(organisateurs);
 float somme = ids.isEmpty() ? 0f : logisticsClient.coutReserve(ids);   // aucun appel si pas de logistique
 ```
+
+### feedback-service (port 8104, base `db_feedback`)
+
+- **Branche d'origine** : `feature/feedback` (ouemnaa).
+- **Changements** :
+  - `@ManyToOne Event` et `@ManyToOne Participant` deviennent `eventId` (UUID) et `participantId`. La contrainte d'unicité `uk_feedback_event_participant` est conservée sur les mêmes colonnes : un seul avis par participant et par événement, garanti par la base, même avec deux requêtes simultanées ;
+  - les règles et leur ordre ne changent pas (note de 1 à 5 → événement existant → participant existant **et** inscrit → événement terminé → pas de doublon). Mais l'événement et le participant sont lus par **OpenFeign** (event-service, participant-service) ;
+  - « participant inscrit » se lit maintenant dans `participantIds` de l'événement : c'est event-service qui porte l'inscription (Q10) ;
+  - le `FeedbackExceptionHandler` d'origine est remplacé par le format d'erreur commun (`ApiError`, module `common`), identique dans les 5 services ;
+  - ajouts : `GET /feedback/moyennes` (moyenne et nombre d'avis par événement, source de statistics-service) et le fuseau horaire de la règle « terminé », réglable dans `config-repo/feedback-service.yml` (Africa/Tunis ; un conteneur Docker est en UTC).
+- **Tests** : 42 méthodes d'origine (53 exécutions avec les tests paramétrés) : 37 adaptées et 5 supprimées, avec raison ; 10 ajoutées. Soit **62 exécutions vertes** (détail dans `ETAT-FINAL.md`).
+
+| Monolithe (`/events`, port 8089) | Microservices (via la Gateway, port 8088) |
+|---|---|
+| `POST /events/feedback/{idEvent}/{idPart}` | `POST /api/feedback/{idEvent}/{idPart}` (201 ; 400, 404, 409 ; 503 si un service vérifié est en panne) |
+| `GET /events/feedback/event/{id}` | `GET /api/feedback/event/{id}` |
+| `GET /events/feedback/event/{id}/moyenne` | `GET /api/feedback/event/{id}/moyenne` |
+| `DELETE /events/feedback/{id}` | `DELETE /api/feedback/{id}` (204) |
+| `GET /events/event-stats` (moyenne calculée par jointure) | `GET /api/feedback/moyennes`, lu par statistics-service |
+
+**Avant / après : l'entité.**
+
+```java
+// AVANT — monolithe (feature/feedback) : clés étrangères vers les tables event et participant
+@ManyToOne(fetch = FetchType.LAZY, optional = false)
+@JoinColumn(name = "event_id", nullable = false)
+private Event event;
+
+// APRÈS — feedback-service : mêmes colonnes, sans clé étrangère (les tables sont dans d'autres bases)
+@Column(name = "event_id", nullable = false, length = 36)
+private String eventId;          // UUID de l'événement (event-service)
+```
+
+**Avant / après : « le participant est-il inscrit à l'événement ? ».**
+
+```java
+// AVANT — lecture de la table participant et de sa relation events, dans la même base
+Participant participant = participantRepository.findById(participantId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Participant not found"));
+boolean associated = participant.getEvents() != null && participant.getEvents().stream()
+        .anyMatch(event -> event.getIdEvent() == eventId);
+
+// APRÈS — existence demandée à participant-service, inscription lue dans l'événement (event-service)
+RemoteCall.call("participant-service", "Participant not found",
+        () -> participantClient.getParticipant(participantId));
+boolean associated = event.participantIds() != null && event.participantIds().contains(participantId);
+```

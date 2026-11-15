@@ -1340,6 +1340,558 @@
           }
         }
       ]
+    },
+    {
+      "name": "feedback-service",
+      "description": "**feedback-service** — repris de `feature/feedback (ouemnaa)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/feedback/{idEvent}/{idPart}` | `POST /api/feedback/{idEvent}/{idPart} (vérifs par Feign)` |\n| `GET /events/feedback/event/{id}` | `GET /api/feedback/event/{id}` |\n| `GET /events/feedback/event/{id}/moyenne` | `GET /api/feedback/event/{id}/moyenne` |\n| `DELETE /events/feedback/{id}` | `DELETE /api/feedback/{id}` |\n| `GET /events/event-stats (moyenne)` | `GET /api/feedback/moyennes (lu par statistics-service)` |",
+      "item": [
+        {
+          "name": "Préparer : événement terminé (event-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('feedbackEventId', pm.response.json().idEvent);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Forum-{{$timestamp}}\",\n  \"dateDebut\": \"2025-06-01\",\n  \"dateFin\": \"2025-06-02\",\n  \"participantIds\": [\n    \"{{participantId}}\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Préparer : événement à venir (event-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('futurEventId', pm.response.json().idEvent);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Futur-{{$timestamp}}\",\n  \"dateDebut\": \"2030-01-01\",\n  \"dateFin\": \"2030-01-02\",\n  \"participantIds\": [\n    \"{{participantId}}\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Donner un avis",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('feedbackId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 5,\n  \"commentaire\": \"Excellent forum\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Avis d'un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/event/{{feedbackEventId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "event",
+                "{{feedbackEventId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Moyenne d'un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Moyenne = 5', () => pm.expect(pm.response.json().averageRating).to.eql(5));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/event/{{feedbackEventId}}/moyenne",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "event",
+                "{{feedbackEventId}}",
+                "moyenne"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Moyennes de tous les événements (statistics-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Contient l\\'événement noté', () => pm.expect(pm.response.json().some(m => m.eventId === pm.collectionVariables.get('feedbackEventId'))).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/moyennes",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "moyennes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 409 : deuxième avis du même participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : participant non inscrit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId2}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : événement pas terminé",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{futurEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{futurEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : note hors bornes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 6\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : note décimale",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 1.5\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : événement inconnu (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/00000000-0000-0000-0000-000000000000/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "00000000-0000-0000-0000-000000000000",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : participant inconnu (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/999999",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "999999"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Supprimer un avis",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : avis déjà supprimé",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackId}}"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -1369,6 +1921,18 @@
     },
     {
       "key": "eventDescription",
+      "value": "1"
+    },
+    {
+      "key": "feedbackEventId",
+      "value": "1"
+    },
+    {
+      "key": "futurEventId",
+      "value": "1"
+    },
+    {
+      "key": "feedbackId",
       "value": "1"
     }
   ]

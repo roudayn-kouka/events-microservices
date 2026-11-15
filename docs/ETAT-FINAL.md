@@ -72,4 +72,27 @@ Toutes les classes d'origine sont **adaptées** : l'identifiant devient un UUID,
 
 Résultat : `mvn verify` → **65 tests verts** dans event-service (37 d'origine + 28 ajoutés), couverture JaCoCo **96 %** des instructions.
 
+### feedback-service — origine `feature/feedback`
+
+Les autres classes de test de `feature/feedback` sont des copies des tests des autres branches. Elles sont comptées avec leur service : event-service ci-dessus, et statistics-service pour les tests `EventStats*`. Les tests paramétrés comptent pour une méthode ; le nombre d'exécutions est entre parenthèses.
+
+| Classe d'origine | Tests | Repris | Adaptés | Supprimés | Détail |
+|---|---:|---:|---:|---:|---|
+| `FeedbackServiceTest` | 20 (24) | 0 | 20 | 0 | repositories Event et Participant → clients Feign simulés ; événement absent = 404 renvoyé par Feign ; inscription lue dans `participantIds` ; `getStatus()` → `getStatusCode()` ; UUID. Dans `doesNotMislabelOtherDatabaseErrorsAsDuplicates`, la contrainte « autre » devient une contrainte NOT NULL, car il n'y a plus de clé étrangère |
+| `FeedbackControllerIntegrationTest` | 10 (21) | 0 | 10 | 0 | l'événement et le participant viennent de clients Feign simulés (`@MockitoBean`) au lieu d'entités persistées ; chemins sans context-path ; ID non numérique testé sur le participant (l'événement est un UUID) ; `/event-stats` → `/feedback/moyennes` (source des statistiques) |
+| `FeedbackConcurrencyIntegrationTest` | 1 | 0 | 1 | 0 | clients Feign simulés ; toujours exactement un 201 et un 409, garantis par la contrainte d'unicité |
+| `FeedbackRepositoryTest` | 6 | 0 | 6 | 0 | identifiants au lieu d'entités `Event` et `Participant` à persister |
+| `RequestDtoMappingTest` | 5 | 0 | 0 | 5 | voir « Suppressions » |
+| **Total d'origine** | **42 (53)** | **0** | **37** | **5** | |
+| Ajoutés | | | | | 10 : `RemoteCall` (3), panne d'event-service et de participant-service (2), `/moyennes` sans appel distant (2), une seule vérification distante par lecture (1), 503 au format `ApiError` (1), moyennes groupées en base (1) |
+
+**Suppressions (5) et raison :** `RequestDtoMappingTest` testait `EventWriteRequest`, `ParticipantWriteRequest` et `LogisticsWriteRequest`. Ce sont les DTO d'écriture des événements, participants et logistique du monolithe, pas ceux du feedback. Leurs remplaçants vivent dans les services propriétaires et y sont testés :
+- `EventRequest` → `Event` : `MapperTest` d'event-service, 2 tests ;
+- `ParticipantDTO` : `MapperTest` de participant-service ;
+- `LogisticsDTO` : `MapperTest` de logistics-service.
+
+Les références d'entités (`toReferenceEntity`, ensembles `participants` et `logistics` imbriqués) n'existent plus, puisque les relations sont devenues des ID.
+
+Résultat : `mvn verify` → **62 exécutions vertes** dans feedback-service (47 méthodes), couverture JaCoCo **96 %** des instructions.
+
 _Les autres services sont ajoutés au fil de la phase 2._

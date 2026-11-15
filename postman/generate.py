@@ -143,6 +143,52 @@ SERVICES = [
              {"description": "", "dateDebut": "2026-12-10", "dateFin": "2026-12-11"}, 400, None),
         ],
     },
+    {
+        "nom": "feedback-service",
+        "origine": "feature/feedback (ouemnaa)",
+        "correspondance": [
+            ("POST /events/feedback/{idEvent}/{idPart}", "POST /api/feedback/{idEvent}/{idPart} (vérifs par Feign)"),
+            ("GET /events/feedback/event/{id}", "GET /api/feedback/event/{id}"),
+            ("GET /events/feedback/event/{id}/moyenne", "GET /api/feedback/event/{id}/moyenne"),
+            ("DELETE /events/feedback/{id}", "DELETE /api/feedback/{id}"),
+            ("GET /events/event-stats (moyenne)", "GET /api/feedback/moyennes (lu par statistics-service)"),
+        ],
+        "requetes": [
+            ("Préparer : événement terminé (event-service)", "POST", "/api/events",
+             {"description": "Forum-{{$timestamp}}", "dateDebut": "2025-06-01", "dateFin": "2025-06-02",
+              "participantIds": ["{{participantId}}"]}, 201,
+             "pm.collectionVariables.set('feedbackEventId', pm.response.json().idEvent);"),
+            ("Préparer : événement à venir (event-service)", "POST", "/api/events",
+             {"description": "Futur-{{$timestamp}}", "dateDebut": "2030-01-01", "dateFin": "2030-01-02",
+              "participantIds": ["{{participantId}}"]}, 201,
+             "pm.collectionVariables.set('futurEventId', pm.response.json().idEvent);"),
+            ("Donner un avis", "POST", "/api/feedback/{{feedbackEventId}}/{{participantId}}",
+             {"note": 5, "commentaire": "Excellent forum"}, 201,
+             "pm.collectionVariables.set('feedbackId', pm.response.json().id);"),
+            ("Avis d'un événement", "GET", "/api/feedback/event/{{feedbackEventId}}", None, 200, None),
+            ("Moyenne d'un événement", "GET", "/api/feedback/event/{{feedbackEventId}}/moyenne", None, 200,
+             "pm.test('Moyenne = 5', () => pm.expect(pm.response.json().averageRating).to.eql(5));"),
+            ("Moyennes de tous les événements (statistics-service)", "GET", "/api/feedback/moyennes", None, 200,
+             "pm.test('Contient l\\'événement noté', () => pm.expect(pm.response.json()"
+             ".some(m => m.eventId === pm.collectionVariables.get('feedbackEventId'))).to.be.true);"),
+            ("Erreur 409 : deuxième avis du même participant", "POST",
+             "/api/feedback/{{feedbackEventId}}/{{participantId}}", {"note": 4}, 409, None),
+            ("Erreur 400 : participant non inscrit", "POST", "/api/feedback/{{feedbackEventId}}/{{participantId2}}",
+             {"note": 4}, 400, None),
+            ("Erreur 400 : événement pas terminé", "POST", "/api/feedback/{{futurEventId}}/{{participantId}}",
+             {"note": 4}, 400, None),
+            ("Erreur 400 : note hors bornes", "POST", "/api/feedback/{{feedbackEventId}}/{{participantId}}",
+             {"note": 6}, 400, None),
+            ("Erreur 400 : note décimale", "POST", "/api/feedback/{{feedbackEventId}}/{{participantId}}",
+             {"note": 1.5}, 400, None),
+            ("Erreur 404 : événement inconnu (Feign)", "POST",
+             "/api/feedback/00000000-0000-0000-0000-000000000000/{{participantId}}", {"note": 4}, 404, None),
+            ("Erreur 404 : participant inconnu (Feign)", "POST", "/api/feedback/{{feedbackEventId}}/999999",
+             {"note": 4}, 404, None),
+            ("Supprimer un avis", "DELETE", "/api/feedback/{{feedbackId}}", None, 204, None),
+            ("Erreur 404 : avis déjà supprimé", "DELETE", "/api/feedback/{{feedbackId}}", None, 404, None),
+        ],
+    },
 ]
 
 
@@ -191,7 +237,7 @@ collection = {
     "item": [dossier(s) for s in SERVICES],
     "variable": [{"key": k, "value": "1"} for k in
                  ("participantId", "participantId2", "logisticsId", "logisticsId2", "eventId", "eventId2",
-                  "eventDescription")],
+                  "eventDescription", "feedbackEventId", "futurEventId", "feedbackId")],
 }
 
 

@@ -159,5 +159,23 @@ services:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8101/actuator/health | grep -q '\"status\":\"UP\"'"]
 
+  # Vérifie l'événement (event-service) et le participant (participant-service) par Feign.
+  feedback-service:
+    <<: *spring-service
+    build: ./feedback-service
+    image: events/feedback-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: feedback-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      FEEDBACK_DB_PASSWORD: ${FEEDBACK_DB_PASSWORD}
+    ports: ["8104:8104"]
+    depends_on: *depends-socle
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8104/actuator/health | grep -q '\"status\":\"UP\"'"]
+
 volumes:
   mysql-data:

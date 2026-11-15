@@ -33,6 +33,7 @@
         <module>participant-service</module>
         <module>logistics-service</module>
         <module>event-service</module>
+        <module>feedback-service</module>
     </modules>
 
     <properties>
