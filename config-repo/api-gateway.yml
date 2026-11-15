@@ -50,3 +50,7 @@ management:
     web:
       exposure:
         include: health,info,prometheus,refresh,gateway
+  endpoint:
+    gateway:
+      # /actuator/gateway/routes : consultation des routes seulement (pas de modification à chaud)
+      access: read-only
