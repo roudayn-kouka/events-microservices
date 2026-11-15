@@ -33,4 +33,19 @@ La variante de `ParticipantServicesImplMockitoTest` présente sur `feature/feedb
 
 Résultat : `mvn verify` → **41 tests verts** dans participant-service (31 d'origine + 10 ajoutés), plus **5** dans `common`.
 
+### logistics-service — origine `feature/logistics` (+ 3 tests de `feature/participant`)
+
+| Classe d'origine | Tests | Repris | Adaptés | Supprimés | Détail |
+|---|---:|---:|---:|---:|---|
+| `LogisticsServiceImplMockTest` | 4 | 4 | 0 | 0 | JUnit 4 (`MockitoJUnitRunner`) → JUnit 5 (`MockitoExtension`) |
+| `LogisticsServiceImplTest` | 4 | 3 | 1 | 0 | MySQL → H2 ; `testDeleteLogistics` attend désormais une `ResponseStatusException` 404 au lieu d'une `IllegalArgumentException` (HTTP 500) |
+| `LogisticsControllerMockTest` | 4 | 4 | 0 | 0 | JUnit 5 ; le JSON du DTO a les mêmes champs que l'entité |
+| `LogisticsControllerTest` | 4 | 4 | 0 | 0 | JUnit 5, H2 |
+| `LogisticsControllerListMockTest` (feature/participant) | 2 | 2 | 0 | 0 | JUnit 5 |
+| `MapperTest` (partie logistique, feature/participant) | 1 | 1 | 0 | 0 | — |
+| **Total d'origine** | **19** | **18** | **1** | **0** | |
+| Ajoutés | | | | | 10 : 404 (2), coût réservé (4), lecture par lot (2), validation (1), aller-retour du `Mapper` (1) |
+
+Résultat : `mvn verify` → **29 tests verts** dans logistics-service (19 d'origine + 10 ajoutés).
+
 _Les autres services sont ajoutés au fil de la phase 2._

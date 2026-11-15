@@ -31,6 +31,7 @@
         <module>common</module>
         <!-- Services métier (phase 2) -->
         <module>participant-service</module>
+        <module>logistics-service</module>
     </modules>
 
     <properties>

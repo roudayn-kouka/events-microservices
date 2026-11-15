@@ -18,6 +18,14 @@ eureka:
     lease-renewal-interval-in-seconds: 5
     lease-expiration-duration-in-seconds: 15
 
+spring:
+  cloud:
+    loadbalancer:
+      cache:
+        # Liste des instances mise en cache par la Gateway et Feign : 5 s (35 s par défaut),
+        # pour qu'une instance arrêtée ou revenue soit prise en compte vite (démo, panne n°1)
+        ttl: 5s
+
 management:
   endpoints:
     web:

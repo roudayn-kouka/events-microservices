@@ -97,12 +97,26 @@ Toutes les requêtes passent par la Gateway (`localhost:8088`). Variable utile :
 | P10 | `curl -s -X PUT $G/1/tache/PILOTE \| jq` | Tâche inconnue | `400`, `Valeur « PILOTE » invalide pour le paramètre tache` |
 | P11 | `curl -s -D - -o /dev/null $G \| grep -i x-instance-id` | Instance qui a répondu | `X-Instance-Id: participant-service:participant-service-1` |
 
+### logistics-service
+
+Variable utile : `L=http://localhost:8088/api/logistics`.
+
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| L1 | `mvn -B -pl logistics-service -am install` | Compiler et tester | 29 tests verts |
+| L2 | `curl -s -X POST $L -H "Content-Type: application/json" -d '{"description":"Sonorisation","reserve":true,"prixUnit":250,"quantite":2}' \| jq` | Créer une logistique | `201`, `{"idLog":1,…}` |
+| L3 | `curl -s $L/reserved \| jq 'map({idLog,description,reserve})'` | Logistique réservée | Liste filtrée |
+| L4 | `curl -s $L/1/cout` | Coût d'une logistique | `500.0` (250 × 2) |
+| L5 | `curl -s "$L/cout-reserve?ids=$(curl -s $L \| jq -r 'map(.idLog)\|join(",")')"` | Coût réservé d'un lot (calculCout) | Somme des seules logistiques réservées |
+| L6 | `curl -s $L/999 \| jq` | Logistique inconnue | `404`, `"message":"Logistics introuvable : 999"` (500 dans le monolithe) |
+| L7 | `make restart S=eureka-server` puis `make health` | Redémarrer un service en gardant la branche Git courante pour le Config Server | Toutes les applications se réinscrivent seules ; la Gateway route de nouveau |
+
 ## Postman
 
 | # | Commande | Rôle | Résultat |
 |---|---|---|---|
 | N1 | `python3 postman/generate.py` | Régénérer la collection et les environnements (local, AWS) | `postman/*.json` |
-| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | participant-service : 11 requêtes, 19 assertions, 0 échec |
+| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | participant + logistics : 22 requêtes, 41 assertions, 0 échec |
 | N3 | Postman → *Import* → `postman/events-microservices.postman_collection.json` et `postman/local.postman_environment.json` | Utiliser la collection dans Postman | Un dossier par service, avec le tableau des correspondances d'endpoints |
 
 ## Feign

@@ -86,5 +86,7 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
   - déployer au moins 2 serveurs Eureka répliqués ;
   - compter sur la résilience côté client (Retry et CircuitBreaker, phase 4) pour absorber le délai avant qu'une instance arrêtée ne disparaisse du registre ;
   - sur Kubernetes, on remplacerait souvent Eureka par la découverte native (Services et sondes de disponibilité).
+- **Un second cache, côté client** : Spring Cloud LoadBalancer (Gateway et Feign) garde la liste des instances **35 s** par défaut. Constaté à la phase 2 : après un redémarrage d'Eureka, les services étaient de nouveau UP dans le registre, mais la Gateway répondait encore 503 pendant ce délai. Réglé à **5 s** (`spring.cloud.loadbalancer.cache.ttl`, `config-repo/application.yml`). En production, on garderait un cache plus long (moins d'appels à Eureka), compensé par Retry et CircuitBreaker.
+- **Le Config Server ne lit pas `config-repo/` pour lui-même** : ses délais Eureka sont donc fixés dans son propre `application.yml`. Sans cela, il mettait 30 s à se réinscrire après un redémarrage d'Eureka.
 
 _Les questions suivantes sont ajoutées au fil des phases : CQRS vs CRUD, event sourcing, états du circuit breaker, Gateway vs LoadBalancer, tracing, Terraform…_

@@ -1,0 +1,14 @@
+# Seuls le nom et l'adresse du Config Server sont locaux ; le reste : config-repo/logistics-service.yml
+spring:
+  application:
+    name: logistics-service
+  config:
+    import: "configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 10000
+        max-attempts: 20

@@ -47,6 +47,44 @@ SERVICES = [
             ("Erreur 400 : tâche inconnue", "PUT", "/api/participants/{{participantId}}/tache/PILOTE", None, 400, None),
         ],
     },
+    {
+        "nom": "logistics-service",
+        "origine": "feature/logistics (Ahlem Mastouri)",
+        "correspondance": [
+            ("POST /events/logistics", "POST /api/logistics"),
+            ("PUT /events/logistics", "PUT /api/logistics"),
+            ("GET /events/logistics", "GET /api/logistics"),
+            ("GET /events/logistics/{id}", "GET /api/logistics/{id} (404 si introuvable, 500 avant)"),
+            ("DELETE /events/logistics/{id}", "DELETE /api/logistics/{id}"),
+            ("GET /events/logistics/reserved", "GET /api/logistics/reserved"),
+            ("GET /events/logistics/{id}/cout", "GET /api/logistics/{id}/cout"),
+            ("(nouveau, pour Feign)", "GET /api/logistics?ids=1,2"),
+            ("(nouveau, pour calculCout)", "GET /api/logistics/cout-reserve?ids=1,2"),
+        ],
+        "requetes": [
+            ("Créer une logistique réservée", "POST", "/api/logistics",
+             {"description": "Chaises", "reserve": True, "prixUnit": 12.5, "quantite": 40}, 201,
+             "pm.collectionVariables.set('logisticsId', pm.response.json().idLog);"),
+            ("Créer une logistique non réservée", "POST", "/api/logistics",
+             {"description": "Tables", "reserve": False, "prixUnit": 30, "quantite": 10}, 201,
+             "pm.collectionVariables.set('logisticsId2', pm.response.json().idLog);"),
+            ("Lister la logistique", "GET", "/api/logistics", None, 200, None),
+            ("Lire une logistique", "GET", "/api/logistics/{{logisticsId}}", None, 200, None),
+            ("Logistique réservée", "GET", "/api/logistics/reserved", None, 200, None),
+            ("Coût d'une logistique (12.5 x 40 = 500)", "GET", "/api/logistics/{{logisticsId}}/cout", None, 200,
+             "pm.test('Coût = 500', () => pm.expect(pm.response.json()).to.eql(500));"),
+            ("Lire un lot (Feign)", "GET", "/api/logistics?ids={{logisticsId}},{{logisticsId2}}", None, 200, None),
+            ("Coût réservé d'un lot (calculCout)", "GET",
+             "/api/logistics/cout-reserve?ids={{logisticsId}},{{logisticsId2}}", None, 200,
+             "pm.test('Seule la logistique réservée compte', () => pm.expect(pm.response.json()).to.eql(500));"),
+            ("Modifier une logistique", "PUT", "/api/logistics",
+             {"idLog": "{{logisticsId2}}", "description": "Tables rondes", "reserve": True, "prixUnit": 30,
+              "quantite": 10}, 200, None),
+            ("Erreur 404 : logistique inconnue", "GET", "/api/logistics/999999", None, 404, None),
+            ("Erreur 400 : quantité négative", "POST", "/api/logistics",
+             {"description": "Chaises", "reserve": True, "prixUnit": 10, "quantite": -3}, 400, None),
+        ],
+    },
 ]
 
 
@@ -93,7 +131,8 @@ collection = {
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     },
     "item": [dossier(s) for s in SERVICES],
-    "variable": [{"key": "participantId", "value": "1"}, {"key": "participantId2", "value": "2"}],
+    "variable": [{"key": k, "value": "1"} for k in
+                 ("participantId", "participantId2", "logisticsId", "logisticsId2")],
 }
 
 

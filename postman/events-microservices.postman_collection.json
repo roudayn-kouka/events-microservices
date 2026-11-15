@@ -394,6 +394,387 @@
           }
         }
       ]
+    },
+    {
+      "name": "logistics-service",
+      "description": "**logistics-service** — repris de `feature/logistics (Ahlem Mastouri)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/logistics` | `POST /api/logistics` |\n| `PUT /events/logistics` | `PUT /api/logistics` |\n| `GET /events/logistics` | `GET /api/logistics` |\n| `GET /events/logistics/{id}` | `GET /api/logistics/{id} (404 si introuvable, 500 avant)` |\n| `DELETE /events/logistics/{id}` | `DELETE /api/logistics/{id}` |\n| `GET /events/logistics/reserved` | `GET /api/logistics/reserved` |\n| `GET /events/logistics/{id}/cout` | `GET /api/logistics/{id}/cout` |\n| `(nouveau, pour Feign)` | `GET /api/logistics?ids=1,2` |\n| `(nouveau, pour calculCout)` | `GET /api/logistics/cout-reserve?ids=1,2` |",
+      "item": [
+        {
+          "name": "Créer une logistique réservée",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('logisticsId', pm.response.json().idLog);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Chaises\",\n  \"reserve\": true,\n  \"prixUnit\": 12.5,\n  \"quantite\": 40\n}"
+            }
+          }
+        },
+        {
+          "name": "Créer une logistique non réservée",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('logisticsId2', pm.response.json().idLog);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Tables\",\n  \"reserve\": false,\n  \"prixUnit\": 30,\n  \"quantite\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Lister la logistique",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire une logistique",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/{{logisticsId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "{{logisticsId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logistique réservée",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/reserved",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "reserved"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coût d'une logistique (12.5 x 40 = 500)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Coût = 500', () => pm.expect(pm.response.json()).to.eql(500));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/{{logisticsId}}/cout",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "{{logisticsId}}",
+                "cout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire un lot (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics?ids={{logisticsId}},{{logisticsId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{logisticsId}},{{logisticsId2}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coût réservé d'un lot (calculCout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Seule la logistique réservée compte', () => pm.expect(pm.response.json()).to.eql(500));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/cout-reserve?ids={{logisticsId}},{{logisticsId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "cout-reserve"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{logisticsId}},{{logisticsId2}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier une logistique",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLog\": \"{{logisticsId2}}\",\n  \"description\": \"Tables rondes\",\n  \"reserve\": true,\n  \"prixUnit\": 30,\n  \"quantite\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : logistique inconnue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/999999",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : quantité négative",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Chaises\",\n  \"reserve\": true,\n  \"prixUnit\": 10,\n  \"quantite\": -3\n}"
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -403,7 +784,15 @@
     },
     {
       "key": "participantId2",
-      "value": "2"
+      "value": "1"
+    },
+    {
+      "key": "logisticsId",
+      "value": "1"
+    },
+    {
+      "key": "logisticsId2",
+      "value": "1"
     }
   ]
 }
