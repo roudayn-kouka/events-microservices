@@ -1,0 +1,8 @@
+# Fins de ligne Unix pour tout ce qui s'exécute dans des conteneurs Linux ou sur l'EC2
+*           text=auto eol=lf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.png       binary
+*.jpg       binary
+*.pdf       binary
+*.jar       binary

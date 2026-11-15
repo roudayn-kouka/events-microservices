@@ -1,0 +1,44 @@
+# Maven / Java
+target/
+*.class
+*.log
+hs_err_pid*
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# Node / Angular
+node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Secrets et configuration locale (ne jamais versionner)
+.env
+*.pem
+*.key
+*.p12
+*.jks
+secrets/
+
+# Terraform / Ansible (AWS)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+**/terraform.tfvars
+**/backend.hcl
+**/crash.log
+**/runtime.yml
+**/vault.yml
+**/.vault_pass
+
+# Rapports générés
+trivy-*.txt
+gitleaks-report.json
+newman/
