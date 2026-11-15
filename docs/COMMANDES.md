@@ -192,10 +192,13 @@ _Phase 5._
 |---|---|---|---|
 | D1 | `docker version` (dans WSL) | Vérifier l'intégration WSL de Docker Desktop | Client et serveur 28.5.2 |
 | D2 | `make env` | Crée `.env` depuis `.env.example`, mots de passe aléatoires (`openssl rand`) | `.env` (droits 600), ignoré par Git |
-| D3 | `make up` | `docker compose --profile core up -d --build --wait`, branche Git courante lue par le Config Server | 4 conteneurs `healthy` : mysql, config-server, eureka-server, api-gateway |
-| D4 | `make health` | Tests de fumée du socle | « Tout est opérationnel » |
+| D3 | `make up` | `docker compose --profile core up -d --build --wait`, branche Git courante lue par le Config Server | 9 conteneurs `healthy` : mysql, config-server, eureka-server, api-gateway et les 5 services métier |
+| D4 | `make health` | Tests de fumée : socle, puis chaque service UP dans Eureka et joignable via la Gateway | « Tout est opérationnel » |
 | D5 | `docker compose ps` | État et santé des conteneurs | `Up … (healthy)` |
 | D6 | `make down` | Arrêt (volumes conservés) | — |
+| D7 | `make seed` | Jeu de démonstration créé par les API via la Gateway (remplace le `DemoDataLoader`) | 6 participants, 4 événements `[Démo]`, 8 logistiques, 5 avis, coûts recalculés (1220, 1080, 250 DT) |
+| D8 | `make seed` (une deuxième fois) | Relance sans doublon | « 4 événement(s) [Démo] déjà présents : rien à faire » |
+| D9 | `docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable scripts/*.sh` | Analyse des scripts shell | Aucun avertissement |
 
 ## Prometheus · Grafana · Zipkin
 _Phase 6._

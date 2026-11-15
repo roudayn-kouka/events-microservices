@@ -40,7 +40,7 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 39,5,Story,Feign depuis event-service,"Vers participant-service (existence, recherche) et logistics-service (création, coût)",Highest,feign,3,Done
 40,5,Story,Feign depuis feedback-service,"Vérifie l'événement (existence, inscription, date de fin) et le participant",Highest,feign,2,Done
 41,39,Task,calculCout via Feign,Recalcul planifié du coût des événements par appel à logistics-service,High,feign,2,Done
-42,4,Task,Script de données de démonstration,scripts/seed-demo.sh : jeu de données créé par les API via la Gateway,Medium,services,1,To Do
+42,4,Task,Script de données de démonstration,scripts/seed-demo.sh : jeu de données créé par les API via la Gateway,Medium,services,1,Done
 43,8,Story,Axon Server en conteneur,Event store et bus de messages ; interface sur 8024,Highest,axon,1,To Do
 44,8,Story,EventAggregate,"Commandes Create, Update, Delete, AffecterParticipant, AffecterLogistique ; @CommandHandler et @EventSourcingHandler",Highest,axon;cqrs,5,To Do
 45,44,Task,Tests AggregateTestFixture,Given/When/Then pour chaque commande de l'agrégat,High,axon;tests,2,To Do

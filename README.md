@@ -13,7 +13,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 |---|---|---|
 | 0 | Monorepo, POM parent, GitFlow, backlog JIRA, livrables | Terminée |
 | 1 | Socle : Config Server, Eureka, Gateway, MySQL, Docker Compose | Terminée |
-| 2 | Services métier + Feign | 5/5 services faits (statistics en version AVANT CQRS) ; reste le script de démonstration |
+| 2 | Services métier + Feign (statistics en version AVANT CQRS), `make seed` | Terminée |
 
 ## Prérequis
 
@@ -27,6 +27,7 @@ cd ~/events-microservices
 make build    # mvn verify : compilation et tests
 make up       # crée .env si besoin, construit les images, démarre et attend « healthy »
 make health   # tests de fumée
+make seed     # jeu de données de démonstration (par les API, via la Gateway)
 make down     # arrêt (données conservées)
 ```
 
@@ -61,7 +62,7 @@ events-microservices/
 ├── docker/mysql/init/      Création des bases et utilisateurs par service
 ├── docker-compose.yml      Stack locale (profils core, lite…)
 ├── Makefile                make up / down / health…
-├── scripts/                init-env.sh, health.sh
+├── scripts/                init-env.sh, health.sh, seed-demo.sh
 ├── jira/                   Backlog importable (EVT-1 à EVT-89)
 └── docs/                   Plan, commandes, captures, théorie, scénario, présentation
 ```

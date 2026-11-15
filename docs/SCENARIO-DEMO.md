@@ -3,6 +3,8 @@
 Fil conducteur : **de la création d'un événement jusqu'au dashboard statistiques**, avec les pannes et le circuit breaker visibles dans Grafana.
 Ce scénario est complété au fil des phases ; les étapes ci-dessous sont la trame validée.
 
+**Préparation (avant le jury)** : `make up`, `make health`, puis `make seed` (jeu `[Démo]` aux dates relatives : deux événements terminés et notés, deux à venir). Pour repartir d'une base vide, `docker compose down -v` supprime les volumes : à réserver à une remise à zéro volontaire.
+
 | Minute | Étape | Où | Ce que le jury voit |
 |---|---|---|---|
 | 0:00 | Architecture et démarrage (`docker compose … up -d`) | Terminal, Eureka | Tous les services UP dans Eureka (2 instances participant et statistics) |
