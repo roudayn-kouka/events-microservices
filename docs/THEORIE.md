@@ -65,4 +65,26 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - Docker Compose ajoute `depends_on: condition: service_healthy` pour l'ordre du premier démarrage.
 - Fichiers : `api-gateway/src/main/resources/application.yml`, `docker-compose.yml`.
 
+### Q9. Pourquoi avoir réduit les délais d'Eureka, et que ferait-on en production ?
+
+| Réglage | Valeur par défaut | Valeur du projet | Fichier |
+|---|---|---|---|
+| Battement de cœur (`lease-renewal-interval-in-seconds`) | 30 s | 5 s | `config-repo/application.yml` |
+| Expiration d'une instance muette (`lease-expiration-duration-in-seconds`) | 90 s | 15 s | `config-repo/application.yml` |
+| Premier enregistrement (`initial-instance-info-replication-interval-seconds`) | 40 s | 5 s | `config-repo/application.yml` |
+| Rafraîchissement du registre chez les clients (`registry-fetch-interval-seconds`) | 30 s | 5 s | `config-repo/application.yml` |
+| Nettoyage côté serveur (`eviction-interval-timer-in-ms`) | 60 s | 5 s | `config-repo/eureka-server.yml` |
+| Auto-préservation (`enable-self-preservation`) | activée | désactivée | `config-repo/eureka-server.yml` |
+
+- **Pourquoi réduire** : en démonstration, chaque seconde compte. Avec les valeurs par défaut, un service démarré n'apparaît qu'après environ 40 s. Pire : un service arrêté (`docker stop`, panne n°1) reste listé jusqu'à 90 s ou plus. La Gateway et Feign continueraient alors à lui envoyer du trafic, et le jury ne verrait pas la reprise.
+- **Impact en production** :
+  - **trafic** : un battement de cœur toutes les 5 s, multiplié par le nombre d'instances, charge davantage le serveur Eureka et le réseau. Chaque client télécharge aussi le registre 6 fois plus souvent ;
+  - **faux positifs** : un ralentissement passager (GC, réseau) de 15 s suffit à retirer une instance pourtant saine ;
+  - **auto-préservation désactivée** : lors d'une coupure réseau partielle, Eureka peut vider son registre d'un coup, alors que les instances fonctionnent. Tout le trafic tombe en 503.
+- **Ce qu'on ferait en production** :
+  - garder les valeurs par défaut (30 s, 90 s) et l'auto-préservation **activée** ;
+  - déployer au moins 2 serveurs Eureka répliqués ;
+  - compter sur la résilience côté client (Retry et CircuitBreaker, phase 4) pour absorber le délai avant qu'une instance arrêtée ne disparaisse du registre ;
+  - sur Kubernetes, on remplacerait souvent Eureka par la découverte native (Services et sondes de disponibilité).
+
 _Les questions suivantes sont ajoutées au fil des phases : CQRS vs CRUD, event sourcing, états du circuit breaker, Gateway vs LoadBalancer, tracing, Terraform…_

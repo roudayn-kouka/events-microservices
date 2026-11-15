@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""
+Génère la collection Postman (format v2.1) et les environnements, à partir de la liste SERVICES.
+Usage : python3 postman/generate.py   -> postman/*.json (fichiers à importer dans Postman)
+Chaque requête passe par la Gateway ({{gateway}}) et vérifie son code HTTP (onglet Tests).
+Chaque dossier décrit la correspondance « ancien endpoint du monolithe → nouvel endpoint ».
+"""
+import json
+import pathlib
+
+ICI = pathlib.Path(__file__).parent
+
+# ----------------------------------------------------------------------------- services
+SERVICES = [
+    {
+        "nom": "participant-service",
+        "origine": "feature/participant (Farah Baraket)",
+        "correspondance": [
+            ("POST /events/participant/add", "POST /api/participants"),
+            ("GET /events/participant/all", "GET /api/participants"),
+            ("GET /events/participant/{id}", "GET /api/participants/{id}"),
+            ("PUT /events/participant/update/{id}", "PUT /api/participants/{id}"),
+            ("PUT /events/participant/{id}/tache/{tache}", "PUT /api/participants/{id}/tache/{tache}"),
+            ("DELETE /events/participant/delete/{id}", "DELETE /api/participants/{id}"),
+            ("POST /events/event/addPart", "POST /api/participants"),
+            ("(nouveau, pour Feign)", "GET /api/participants?ids=1,2"),
+            ("(nouveau, pour calculCout)", "GET /api/participants/search?nom=&prenom=&tache="),
+        ],
+        "requetes": [
+            ("Créer un participant (organisateur)", "POST", "/api/participants",
+             {"nom": "Tounsi", "prenom": "Ahmed", "tache": "ORGANISATEUR"}, 201,
+             "pm.collectionVariables.set('participantId', pm.response.json().idPart);"),
+            ("Créer un participant (invitée)", "POST", "/api/participants",
+             {"nom": "Ben Salah", "prenom": "Amira", "tache": "INVITE"}, 201,
+             "pm.collectionVariables.set('participantId2', pm.response.json().idPart);"),
+            ("Lister les participants", "GET", "/api/participants", None, 200, None),
+            ("Lire un participant", "GET", "/api/participants/{{participantId}}", None, 200, None),
+            ("Lire un lot (Feign)", "GET", "/api/participants?ids={{participantId}},{{participantId2}}", None, 200, None),
+            ("Rechercher (calculCout)", "GET",
+             "/api/participants/search?nom=Tounsi&prenom=Ahmed&tache=ORGANISATEUR", None, 200, None),
+            ("Modifier un participant", "PUT", "/api/participants/{{participantId2}}",
+             {"nom": "Ben Salah", "prenom": "Amira", "tache": "SERVEUR"}, 200, None),
+            ("Changer la tâche", "PUT", "/api/participants/{{participantId2}}/tache/ANIMATEUR", None, 200, None),
+            ("Erreur 404 : participant inconnu", "GET", "/api/participants/999999", None, 404, None),
+            ("Erreur 400 : nom vide (validation)", "POST", "/api/participants",
+             {"nom": "", "prenom": "X", "tache": "INVITE"}, 400, None),
+            ("Erreur 400 : tâche inconnue", "PUT", "/api/participants/{{participantId}}/tache/PILOTE", None, 400, None),
+        ],
+    },
+]
+
+
+# ----------------------------------------------------------------------------- génération
+def requete(nom, methode, chemin, corps, attendu, script_suite):
+    tests = [f"pm.test('HTTP {attendu}', () => pm.response.to.have.status({attendu}));"]
+    if attendu < 300:
+        tests.append("pm.test('Réponse produite par le service (X-Instance-Id)', () => "
+                     "pm.response.to.have.header('X-Instance-Id'));")
+    if script_suite:
+        tests.append(script_suite)
+    chemin_brut = "{{gateway}}" + chemin
+    item = {
+        "name": nom,
+        "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": tests}}],
+        "request": {
+            "method": methode,
+            "header": [{"key": "Content-Type", "value": "application/json"}] if corps is not None else [],
+            "url": {"raw": chemin_brut, "host": ["{{gateway}}"],
+                    "path": [p for p in chemin.split("?")[0].split("/") if p]},
+        },
+    }
+    if "?" in chemin:
+        item["request"]["url"]["query"] = [
+            {"key": k, "value": v} for k, v in (q.split("=", 1) for q in chemin.split("?", 1)[1].split("&"))]
+    if corps is not None:
+        item["request"]["body"] = {"mode": "raw", "raw": json.dumps(corps, ensure_ascii=False, indent=2)}
+    return item
+
+
+def dossier(service):
+    lignes = ["| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |", "|---|---|"]
+    lignes += [f"| `{a}` | `{n}` |" for a, n in service["correspondance"]]
+    description = (f"**{service['nom']}** — repris de `{service['origine']}`.\n\n"
+                   "### Ancien endpoint → nouvel endpoint via la Gateway\n\n" + "\n".join(lignes))
+    return {"name": service["nom"], "description": description,
+            "item": [requete(*r) for r in service["requetes"]]}
+
+
+collection = {
+    "info": {
+        "name": "Events FST — microservices Spring Cloud",
+        "description": "Toutes les requêtes passent par l'API Gateway ({{gateway}}). Générée par postman/generate.py.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    },
+    "item": [dossier(s) for s in SERVICES],
+    "variable": [{"key": "participantId", "value": "1"}, {"key": "participantId2", "value": "2"}],
+}
+
+
+def environnement(nom, gateway):
+    return {"name": nom, "values": [{"key": "gateway", "value": gateway, "type": "default", "enabled": True}],
+            "_postman_variable_scope": "environment"}
+
+
+(ICI / "events-microservices.postman_collection.json").write_text(
+    json.dumps(collection, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+(ICI / "local.postman_environment.json").write_text(
+    json.dumps(environnement("Events — local", "http://localhost:8088"), ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8")
+(ICI / "aws.postman_environment.json").write_text(
+    json.dumps(environnement("Events — AWS", "http://IP_PUBLIQUE_EC2:8088"), ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8")
+total = sum(len(s["requetes"]) for s in SERVICES)
+print(f"Collection générée : {len(SERVICES)} dossier(s), {total} requête(s).")

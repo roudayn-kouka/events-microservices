@@ -27,7 +27,10 @@
         <module>config-server</module>
         <module>eureka-server</module>
         <module>api-gateway</module>
-        <!-- Services métier : ajoutés à la phase 2 -->
+        <!-- Briques web partagées (erreurs JSON, X-Instance-Id) -->
+        <module>common</module>
+        <!-- Services métier (phase 2) -->
+        <module>participant-service</module>
     </modules>
 
     <properties>
@@ -43,6 +46,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>tn.fst.events</groupId>
+                <artifactId>common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>

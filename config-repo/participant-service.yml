@@ -1,0 +1,13 @@
+# participant-service : base dédiée db_participant, utilisateur participant_user
+server:
+  port: ${SERVER_PORT:8102}
+
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/db_participant
+    username: participant_user
+    password: ${PARTICIPANT_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
