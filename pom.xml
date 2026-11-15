@@ -23,7 +23,11 @@
     <description>Gestion des événements FST en microservices Spring Cloud (CQRS Axon)</description>
 
     <modules>
-        <!-- Ajoutés phase par phase : config-server, eureka-server, api-gateway, services métier -->
+        <!-- Socle Spring Cloud (phase 1) -->
+        <module>config-server</module>
+        <module>eureka-server</module>
+        <module>api-gateway</module>
+        <!-- Services métier : ajoutés à la phase 2 -->
     </modules>
 
     <properties>

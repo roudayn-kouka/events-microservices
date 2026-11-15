@@ -1,0 +1,39 @@
+# =============================================================================
+#  Configuration COMMUNE à tous les services (servie par le Config Server).
+#  Un fichier <service>.yml complète ou remplace ces valeurs pour chaque service.
+#  Aucun secret ici : les ${...} sont résolus par chaque service avec SES variables
+#  d'environnement (fichier .env, jamais versionné).
+# =============================================================================
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    # Identifiant lisible dans Eureka et dans l'en-tête X-Instance-Id : <service>:<instance>
+    instance-id: ${spring.application.name}:${INSTANCE_ID:${random.value}}
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,refresh
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+info:
+  application: ${spring.application.name}
+  instance: ${INSTANCE_ID:local}
+  projet: Events FST - microservices Spring Cloud
