@@ -8,7 +8,7 @@ BRANCHE   := $(shell git branch --show-current)
 PROFILES  ?= --profile core
 
 .DEFAULT_GOAL := help
-.PHONY: help env build up restart down ps logs health
+.PHONY: help env build up restart down ps logs health seed
 
 help: ## Liste des commandes
 	@awk -F ':.*## ' '/^[a-z-]+:.*## / { printf "  make %-8s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -38,3 +38,6 @@ logs: ## Journaux en continu (Ctrl+C pour quitter)
 
 health: ## Vérifie Config Server, Eureka, Gateway et MySQL
 	@bash scripts/health.sh
+
+seed: ## Crée le jeu de données de démonstration par les API (FORCE=1 pour recréer)
+	@bash scripts/seed-demo.sh

@@ -68,6 +68,10 @@ Pour chaque capture : ce qu'il faut ouvrir, et ce qui doit être visible.
 - [ ] **C41 — AVANT CQRS : un service en panne rend les statistiques indisponibles** : terminal, commande ST8. Visible : `feedback-service` arrêté → `/api/stats/summary` répond `503`.
 - [ ] **C42 — Postman** : dossier « statistics-service (mon module) — AVANT CQRS », et Newman : 62 requêtes, 116 assertions, 0 échec.
 
+### Données de démonstration
+
+- [ ] **C43 — make seed** : terminal, commandes D7 et D8. Visible : les 4 événements `[Démo]`, les coûts recalculés par `calculCout` et le résumé de statistics-service ; puis la relance sans doublon.
+
 ### Comparaison AVANT / APRÈS CQRS (planifiée dès la phase 2)
 
 À la phase 6, les **mêmes commandes** (ST5, ST6, ST8) seront relancées. Les captures seront placées côte à côte sur une diapositive :
