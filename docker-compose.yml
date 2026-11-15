@@ -1,0 +1,105 @@
+# =============================================================================
+#  Events — microservices Spring Cloud : stack locale
+#  Profils :  core (stack complète)  · lite (une instance par service, dev/AWS)
+#             observability · security · frontend (phases suivantes)
+#  Démarrage : make up   (ou : docker compose --profile core up -d --build --wait)
+#  Ports choisis pour ne pas gêner ~/devops (8080, 8081, 9000, 9090, 3000) ni le
+#  MySQL Windows (3306) : voir docs/PLAN.md, section 4.
+# =============================================================================
+name: events
+
+x-spring-service: &spring-service
+  restart: unless-stopped
+  mem_limit: 512m
+  environment: &spring-env
+    CONFIG_SERVER_URL: http://config-server:8888
+    EUREKA_URL: http://eureka-server:8761/eureka
+    JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+
+x-healthcheck: &healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 18
+  start_period: 30s
+
+services:
+  # ------------------------------------------------------------------- MySQL
+  mysql:
+    image: mysql:8.4
+    profiles: [core, lite]
+    restart: unless-stopped
+    mem_limit: 768m
+    command: ["--innodb-buffer-pool-size=128M", "--max-connections=300"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Lancer « make env » pour créer .env}
+      EVENT_DB_PASSWORD: ${EVENT_DB_PASSWORD}
+      PARTICIPANT_DB_PASSWORD: ${PARTICIPANT_DB_PASSWORD}
+      LOGISTICS_DB_PASSWORD: ${LOGISTICS_DB_PASSWORD}
+      FEEDBACK_DB_PASSWORD: ${FEEDBACK_DB_PASSWORD}
+      STATS_DB_PASSWORD: ${STATS_DB_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    ports: ["3307:3306"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+
+  # ----------------------------------------------------------- Config Server
+  config-server:
+    <<: *spring-service
+    build: ./config-server
+    image: events/config-server:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: config-server-1
+      # Le dépôt monté en lecture seule : config-repo/ est lu sur la branche CONFIG_GIT_LABEL
+      CONFIG_GIT_URI: file:///repo
+      CONFIG_GIT_LABEL: ${CONFIG_GIT_LABEL:-develop}
+      CONFIG_OVERRIDES_DIR: /config-overrides
+    ports: ["8888:8888"]
+    volumes:
+      - ./:/repo:ro
+      - ./config-overrides:/config-overrides:ro
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # ----------------------------------------------------------- Eureka Server
+  eureka-server:
+    <<: *spring-service
+    build: ./eureka-server
+    image: events/eureka-server:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: eureka-server-1
+    ports: ["8761:8761"]
+    depends_on:
+      config-server: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # ------------------------------------------------------------- API Gateway
+  api-gateway:
+    <<: *spring-service
+    build: ./api-gateway
+    image: events/api-gateway:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: api-gateway-1
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:4200}
+    ports: ["8088:8088"]
+    depends_on:
+      config-server: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8088/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+volumes:
+  mysql-data:
