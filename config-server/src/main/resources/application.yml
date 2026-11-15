@@ -14,9 +14,13 @@ spring:
           # 1. Surcharges à chaud (scripts de panne) : prioritaires, jamais commitées
           - type: native
             search-locations: file:${CONFIG_OVERRIDES_DIR:${user.home}/events-microservices/config-overrides}
-          # 2. Configuration de référence : dossier config-repo/ du dépôt Git
+          # 2. Configuration de référence : dossier config-repo/ du dépôt Git.
+          #    Chemin SANS « file: » : avec « file: », Spring Cloud Config travaille DANS le
+          #    dépôt source (checkout de la branche demandée dans le dossier de travail !).
+          #    Un chemin simple force un vrai clone JGit dans basedir.
           - type: git
-            uri: ${CONFIG_GIT_URI:file://${user.home}/events-microservices}
+            uri: ${CONFIG_GIT_URI:${user.home}/events-microservices}
+            basedir: ${java.io.tmpdir}/config-repo-clone
             search-paths: config-repo
             default-label: ${CONFIG_GIT_LABEL:develop}
             clone-on-start: true

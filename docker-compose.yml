@@ -55,8 +55,9 @@ services:
     environment:
       <<: *spring-env
       INSTANCE_ID: config-server-1
-      # Le dépôt monté en lecture seule : config-repo/ est lu sur la branche CONFIG_GIT_LABEL
-      CONFIG_GIT_URI: file:///repo
+      # Dépôt monté en lecture seule et CLONÉ par JGit (chemin sans « file: ») :
+      # config-repo/ est lu sur la branche CONFIG_GIT_LABEL, sans toucher au dossier de travail
+      CONFIG_GIT_URI: /repo
       CONFIG_GIT_LABEL: ${CONFIG_GIT_LABEL:-develop}
       CONFIG_OVERRIDES_DIR: /config-overrides
     ports: ["8888:8888"]
