@@ -1,9 +1,9 @@
 Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,Status
 1,,Epic,Git et JIRA,"GitFlow (main, develop, feature/*), commits conventionnels citant la clé JIRA, tags de version",Medium,git,,To Do
 2,,Epic,Socle Spring Cloud,"Config Server (config-repo Git), Eureka, API Gateway",Highest,spring-cloud,,To Do
-3,,Epic,Bases de données MySQL,"Une base et un utilisateur par microservice sur un serveur MySQL",Highest,mysql,,To Do
+3,,Epic,Bases de données MySQL,Une base et un utilisateur par microservice sur un serveur MySQL,Highest,mysql,,To Do
 4,,Epic,Microservices métier,"event, participant, logistics, feedback, statistics : reprise des 5 branches de l'équipe",Highest,services,,To Do
-5,,Epic,OpenFeign,"Remplacement des relations JPA inter-services par des ID et des appels Feign",Highest,feign,,To Do
+5,,Epic,OpenFeign,Remplacement des relations JPA inter-services par des ID et des appels Feign,Highest,feign,,To Do
 6,,Epic,Résilience4j et pannes,"Retry, RateLimiter, CircuitBreaker, TimeLimiter, fallbacks, 5 types de défaillance",Highest,resilience4j,,To Do
 7,,Epic,Équilibrage de charge,"Spring Cloud LoadBalancer, 2 instances, preuve de répartition",High,loadbalancer,,To Do
 8,,Epic,CQRS Axon,"Axon Server, EventAggregate, projections et requêtes dans statistics-service (mon module)",Highest,axon;cqrs,,To Do
@@ -21,69 +21,69 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 20,18,Task,Branches GitFlow et conventions,"main, develop, feature/EVT-xx-* fusionnées en --no-ff ; commits type(portée): message EVT-xx",Medium,git,1,Done
 21,1,Task,Backlog JIRA importable,"jira/backlog.csv : epics par technologie, stories, tasks ; clés EVT-n",Medium,jira,1,Done
 22,17,Task,Squelette des livrables,"COMMANDES, CAPTURES, SCENARIO-DEMO, THEORIE, PRESENTATION-PLAN",Medium,docs,1,Done
-23,2,Story,Config Server et config-repo,"Configurations centralisées dans un dépôt Git dédié (config-repo/), un fichier par service",Highest,config-server,3,To Do
-24,23,Task,Dépôt Git config-repo,"application.yml commun + un YAML par service ; montage en lecture dans le conteneur",High,config-server,1,To Do
-25,2,Story,Eureka Server,"Enregistrement et découverte dynamique de tous les services",Highest,eureka,2,To Do
-26,2,Story,API Gateway,"Routes lb:// vers chaque service, CORS pour Angular, en-tête de trace",Highest,gateway,3,To Do
-27,3,Story,Une base par microservice,"db_event, db_participant, db_logistics, db_feedback, db_stats ; un utilisateur MySQL par base",Highest,mysql,2,To Do
-28,27,Task,Script d'initialisation MySQL,"docker-entrypoint-initdb.d : bases, utilisateurs, droits minimaux",High,mysql,1,To Do
-29,15,Story,Docker Compose du socle,"Healthchecks, depends_on: service_healthy, profils core / lite",High,docker,3,To Do
-30,29,Task,Fichier .env.example,"Variables de mots de passe sans aucune valeur réelle ; .env ignoré par Git",Medium,docker,1,To Do
+23,2,Story,Config Server et config-repo,"Configurations centralisées dans un dépôt Git dédié (config-repo/), un fichier par service",Highest,config-server,3,Done
+24,23,Task,Dépôt Git config-repo,application.yml commun + un YAML par service ; montage en lecture dans le conteneur,High,config-server,1,Done
+25,2,Story,Eureka Server,Enregistrement et découverte dynamique de tous les services,Highest,eureka,2,Done
+26,2,Story,API Gateway,"Routes lb:// vers chaque service, CORS pour Angular, en-tête de trace",Highest,gateway,3,Done
+27,3,Story,Une base par microservice,"db_event, db_participant, db_logistics, db_feedback, db_stats ; un utilisateur MySQL par base",Highest,mysql,2,Done
+28,27,Task,Script d'initialisation MySQL,"docker-entrypoint-initdb.d : bases, utilisateurs, droits minimaux",High,mysql,1,Done
+29,15,Story,Docker Compose du socle,"Healthchecks, depends_on: service_healthy, profils core / lite",High,docker,3,Done
+30,29,Task,Fichier .env.example,Variables de mots de passe sans aucune valeur réelle ; .env ignoré par Git,Medium,docker,1,Done
 31,4,Story,participant-service,"CRUD, tâches, DTO + Mapper (branche de Farah), recherche par nom/prénom/tâche",Highest,services,3,To Do
 32,31,Task,Reprise des tests participant,"Tests Mockito et intégration de feature/participant adaptés (JUnit 5, Jakarta)",High,tests,2,To Do
 33,4,Story,logistics-service,"CRUD, réservation, coût (branche d'Ahlem), lecture par liste d'ID",Highest,services,3,To Do
-34,33,Task,Reprise des tests logistique,"Tests de feature/logistics adaptés",High,tests,2,To Do
+34,33,Task,Reprise des tests logistique,Tests de feature/logistics adaptés,High,tests,2,To Do
 35,4,Story,event-service : lecture et affectations,"GET liste et détail (absents du monolithe), affectations participant/logistique (branche de Nour)",Highest,services,3,To Do
-36,35,Task,Reprise des tests événements,"Tests de feature/event adaptés",High,tests,2,To Do
+36,35,Task,Reprise des tests événements,Tests de feature/event adaptés,High,tests,2,To Do
 37,4,Story,feedback-service,"Notes 1 à 5, unicité, événement terminé, participant inscrit (branche d'Emna)",Highest,services,3,To Do
 38,37,Task,Reprise des tests feedback,"126 tests de feature/feedback, dont la concurrence et le repository",High,tests,2,To Do
 39,5,Story,Feign depuis event-service,"Vers participant-service (existence, recherche) et logistics-service (création, coût)",Highest,feign,3,To Do
 40,5,Story,Feign depuis feedback-service,"Vérifie l'événement (existence, inscription, date de fin) et le participant",Highest,feign,2,To Do
-41,39,Task,calculCout via Feign,"Recalcul planifié du coût des événements par appel à logistics-service",High,feign,2,To Do
-42,4,Task,Script de données de démonstration,"scripts/seed-demo.sh : jeu de données créé par les API via la Gateway",Medium,services,1,To Do
-43,8,Story,Axon Server en conteneur,"Event store et bus de messages ; interface sur 8024",Highest,axon,1,To Do
+41,39,Task,calculCout via Feign,Recalcul planifié du coût des événements par appel à logistics-service,High,feign,2,To Do
+42,4,Task,Script de données de démonstration,scripts/seed-demo.sh : jeu de données créé par les API via la Gateway,Medium,services,1,To Do
+43,8,Story,Axon Server en conteneur,Event store et bus de messages ; interface sur 8024,Highest,axon,1,To Do
 44,8,Story,EventAggregate,"Commandes Create, Update, Delete, AffecterParticipant, AffecterLogistique ; @CommandHandler et @EventSourcingHandler",Highest,axon;cqrs,5,To Do
-45,44,Task,Tests AggregateTestFixture,"Given/When/Then pour chaque commande de l'agrégat",High,axon;tests,2,To Do
+45,44,Task,Tests AggregateTestFixture,Given/When/Then pour chaque commande de l'agrégat,High,axon;tests,2,To Do
 46,8,Story,Publication des événements métier,"participant, logistics et feedback publient sur Axon (EventGateway)",High,axon,2,To Do
-47,8,Story,Projections statistics-service,"@EventHandler alimentant db_stats ; token store JPA dans MySQL (mon module)",Highest,axon;cqrs;statistics,5,To Do
-48,8,Story,Requêtes statistiques,"@QueryHandler via QueryGateway ; API de requêtes séparée de l'API de commandes",Highest,axon;cqrs;statistics,3,To Do
-49,47,Task,Note moyenne des feedbacks,"Moyenne et nombre d'avis par événement et au global",High,statistics,1,To Do
-50,8,Story,Replay de la projection,"Reset du token et reconstruction de db_stats depuis l'event store",High,axon;statistics,2,To Do
+47,8,Story,Projections statistics-service,@EventHandler alimentant db_stats ; token store JPA dans MySQL (mon module),Highest,axon;cqrs;statistics,5,To Do
+48,8,Story,Requêtes statistiques,@QueryHandler via QueryGateway ; API de requêtes séparée de l'API de commandes,Highest,axon;cqrs;statistics,3,To Do
+49,47,Task,Note moyenne des feedbacks,Moyenne et nombre d'avis par événement et au global,High,statistics,1,To Do
+50,8,Story,Replay de la projection,Reset du token et reconstruction de db_stats depuis l'event store,High,axon;statistics,2,To Do
 51,6,Story,Configuration Resilience4j,"Retry 3 x 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s dans config-repo",Highest,resilience4j,3,To Do
 52,51,Task,Fallbacks explicites,"Une méthode fallback par appel Feign ; 503 clair en écriture, réponse dégradée en lecture",Highest,resilience4j,2,To Do
-53,6,Task,Panne 1 : disponibilité,"scripts/pannes/1-disponibilite.sh : docker stop d'un service appelé",High,pannes,1,To Do
-54,6,Task,Panne 2 : temps de réponse > 5 s,"Latence simulée activée par une propriété du Config Server",High,pannes,1,To Do
+53,6,Task,Panne 1 : disponibilité,scripts/pannes/1-disponibilite.sh : docker stop d'un service appelé,High,pannes,1,To Do
+54,6,Task,Panne 2 : temps de réponse > 5 s,Latence simulée activée par une propriété du Config Server,High,pannes,1,To Do
 55,6,Task,Panne 3 : réponse incorrecte,"Réponse corrompue détectée, rejetée, fallback déclenché",High,pannes,1,To Do
-56,6,Task,Panne 4 : erreur réseau,"URL mal configurée entre services puis correction à chaud (/actuator/refresh)",High,pannes,1,To Do
-57,6,Task,Panne 5 : dépendance externe,"Base de données inaccessible : health DOWN et circuit ouvert",High,pannes,1,To Do
-58,7,Story,Deux instances et X-Instance-Id,"participant-service x2 (Feign) et statistics-service x2 (Gateway) ; instance exposée dans chaque réponse",High,loadbalancer,2,To Do
-59,58,Task,Script de répartition,"N requêtes et comptage par instance",Medium,loadbalancer,1,To Do
+56,6,Task,Panne 4 : erreur réseau,URL mal configurée entre services puis correction à chaud (/actuator/refresh),High,pannes,1,To Do
+57,6,Task,Panne 5 : dépendance externe,Base de données inaccessible : health DOWN et circuit ouvert,High,pannes,1,To Do
+58,7,Story,Deux instances et X-Instance-Id,participant-service x2 (Feign) et statistics-service x2 (Gateway) ; instance exposée dans chaque réponse,High,loadbalancer,2,To Do
+59,58,Task,Script de répartition,N requêtes et comptage par instance,Medium,loadbalancer,1,To Do
 60,9,Story,Métriques Prometheus,"actuator/prometheus sur tous les services, scraping via Eureka",High,prometheus,2,To Do
 61,9,Story,Dashboards Grafana provisionnés,"JVM, HTTP, Resilience4j (état du circuit), métriques métier",High,grafana,3,To Do
-62,9,Story,Traçage Zipkin,"Gateway -> service -> Feign ; traceId et spanId dans les logs",High,zipkin,2,To Do
+62,9,Story,Traçage Zipkin,Gateway -> service -> Feign ; traceId et spanId dans les logs,High,zipkin,2,To Do
 63,9,Task,Alertes Prometheus,"Service down, circuit OPEN, latence p95 élevée",Medium,prometheus,1,To Do
 64,10,Story,Swagger agrégé,"OpenAPI par service, sélecteur dans la Gateway",High,swagger,2,To Do
-65,10,Story,Collection Postman,"Tous les endpoints et scénarios de panne ; environnements local et AWS",High,postman,2,To Do
+65,10,Story,Collection Postman,Tous les endpoints et scénarios de panne ; environnements local et AWS,High,postman,2,To Do
 66,11,Story,Realm Keycloak,"Realm events exporté et importé au démarrage, rôles ADMIN/USER",Medium,keycloak,2,To Do
 67,11,Story,Gateway resource server,"Validation JWT, règles par rôle",Medium,keycloak,2,To Do
-68,11,Task,Propagation du JWT,"Relais du jeton par la Gateway et par Feign",Medium,keycloak;feign,1,To Do
+68,11,Task,Propagation du JWT,Relais du jeton par la Gateway et par Feign,Medium,keycloak;feign,1,To Do
 69,12,Story,Écrans participants et logistique,"Base Angular 20 de feature/feedback, écrans des autres features",Medium,angular,3,To Do
-70,12,Story,Dashboard statistiques,"Graphiques alimentés par statistics-service (mon module)",High,angular;statistics,3,To Do
+70,12,Story,Dashboard statistiques,Graphiques alimentés par statistics-service (mon module),High,angular;statistics,3,To Do
 71,12,Task,Connexion Keycloak côté Angular,"Connexion, jeton envoyé à la Gateway, menus selon le rôle",Medium,angular;keycloak,2,To Do
 72,13,Story,Handler global et validation,"@RestControllerAdvice, DTO @Valid, erreurs normalisées",High,quality,2,To Do
-73,13,Task,Tests Feign avec WireMock,"Clients Feign et fallbacks testés sans les autres services",High,tests,2,To Do
-74,13,Task,JaCoCo >= 70 % sur statistics-service,"Seuil appliqué par mvn verify",High,tests;statistics,2,To Do
+73,13,Task,Tests Feign avec WireMock,Clients Feign et fallbacks testés sans les autres services,High,tests,2,To Do
+74,13,Task,JaCoCo >= 70 % sur statistics-service,Seuil appliqué par mvn verify,High,tests;statistics,2,To Do
 75,14,Story,Jenkinsfile multi-services,"Étapes parallèles, détection des services modifiés",Medium,jenkins,3,To Do
-76,75,Task,SonarQube et quality gate,"Analyse par service sur le SonarQube de ~/devops",Medium,sonarqube,1,To Do
-77,75,Task,Scan Trivy,"Images et dépendances",Medium,trivy,1,To Do
-78,75,Task,Paramètres PUSH_IMAGES et DEPLOY_AWS,"false par défaut ; push Docker Hub et déploiement AWS conditionnels",Medium,jenkins,1,To Do
-79,75,Task,Webhook GitHub,"Documenté dans APRES-PUSH.md",Low,jenkins,1,To Do
+76,75,Task,SonarQube et quality gate,Analyse par service sur le SonarQube de ~/devops,Medium,sonarqube,1,To Do
+77,75,Task,Scan Trivy,Images et dépendances,Medium,trivy,1,To Do
+78,75,Task,Paramètres PUSH_IMAGES et DEPLOY_AWS,false par défaut ; push Docker Hub et déploiement AWS conditionnels,Medium,jenkins,1,To Do
+79,75,Task,Webhook GitHub,Documenté dans APRES-PUSH.md,Low,jenkins,1,To Do
 80,16,Story,Terraform EC2,"VPC, SG limité à admin_cidr, EC2 (t3.large, repli t3.medium), LabInstanceProfile",Low,terraform,3,To Do
 81,16,Story,Ansible,"Docker, Compose, swap, dossiers",Low,ansible,2,To Do
 82,16,Story,make aws-up / aws-down,"Vérifs, plan, confirmation, apply, Ansible, rsync, compose, tests de fumée, URL",Low,aws,3,To Do
-83,16,Task,AWS-RUNBOOK,"Procédure pas à pas et coût horaire",Low,aws;docs,1,To Do
+83,16,Task,AWS-RUNBOOK,Procédure pas à pas et coût horaire,Low,aws;docs,1,To Do
 84,17,Story,COMMANDES et CAPTURES,"Toutes les commandes exécutées, par technologie ; checklist des captures",High,docs,2,To Do
 85,17,Story,Scénario de démonstration,"10 minutes : création d'un événement jusqu'au dashboard, pannes et circuit breaker",High,docs,1,To Do
-86,17,Story,THEORIE,"Questions/réponses de l'oral avec lien vers le code",High,docs,2,To Do
+86,17,Story,THEORIE,Questions/réponses de l'oral avec lien vers le code,High,docs,2,To Do
 87,17,Story,Plan de présentation,"Slides par technologie, statistics-service en avant",High,docs,2,To Do
 88,17,Task,"README, APRES-PUSH et ETAT-FINAL","Démarrage en une commande, procédure après push, état final",High,docs,1,To Do
