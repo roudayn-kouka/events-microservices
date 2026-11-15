@@ -102,5 +102,26 @@ services:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8088/actuator/health | grep -q '\"status\":\"UP\"'"]
 
+  # ====================================================== Services métier
+  participant-service:
+    <<: *spring-service
+    build: ./participant-service
+    image: events/participant-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: participant-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      PARTICIPANT_DB_PASSWORD: ${PARTICIPANT_DB_PASSWORD}
+    ports: ["8102:8102"]
+    depends_on: &depends-socle
+      mysql: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8102/actuator/health | grep -q '\"status\":\"UP\"'"]
+
 volumes:
   mysql-data:

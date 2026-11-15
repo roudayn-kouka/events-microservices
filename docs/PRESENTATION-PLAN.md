@@ -27,3 +27,71 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 20 | AWS | Cible A, `make aws-up`, coût par heure | _phase 12_ |
 | 21 | Démonstration | Scénario de 10 minutes | — |
 | 22 | Bilan | Ce qui est fait, ce qui reste | — |
+
+---
+
+## Détail des services métier (slide 10 et annexes)
+
+Pour chaque service : sa branche d'origine, ce qui a changé par rapport au monolithe, la correspondance des endpoints et un exemple de code avant/après. Les mêmes tableaux figurent dans chaque dossier de la collection Postman (`postman/`).
+
+### participant-service (port 8102, base `db_participant`)
+
+- **Branche d'origine** : `feature/participant` (Farah Baraket).
+- **Changements** :
+  - la relation `@ManyToMany Set<Event> events` est supprimée. Le participant ne connaît plus ses événements : c'est event-service qui stocke les identifiants des participants inscrits ;
+  - le DTO perd `Set<EventDTO> events`, et gagne la validation (`@NotBlank`, `@NotNull`) ;
+  - deux endpoints sont ajoutés pour les appels Feign : la lecture par lot (`?ids=`) et la recherche par nom, prénom et tâche (pour `calculCout`) ;
+  - les erreurs sont en JSON homogène, et l'en-tête `X-Instance-Id` est ajouté (module `common`).
+- **Tests** : 31 tests d'origine (16 repris tels quels, 15 adaptés, 0 supprimé) et 10 ajoutés, soit 41 au total (détail dans `ETAT-FINAL.md`).
+
+| Monolithe (`/events`, port 8089) | Microservices (via la Gateway, port 8088) |
+|---|---|
+| `POST /events/participant/add` | `POST /api/participants` (201) |
+| `GET /events/participant/all` | `GET /api/participants` |
+| `GET /events/participant/{id}` | `GET /api/participants/{id}` |
+| `PUT /events/participant/update/{id}` | `PUT /api/participants/{id}` |
+| `PUT /events/participant/{id}/tache/{tache}` | `PUT /api/participants/{id}/tache/{tache}` |
+| `DELETE /events/participant/delete/{id}` | `DELETE /api/participants/{id}` (204) |
+| `POST /events/event/addPart` | `POST /api/participants` |
+| — | `GET /api/participants?ids=1,2` (lecture par lot, Feign) |
+| — | `GET /api/participants/search?nom=&prenom=&tache=` (calculCout) |
+
+**Avant / après : l'entité.**
+
+```java
+// AVANT — monolithe (feature/participant) : relation JPA vers Event
+@Entity
+public class Participant implements Serializable {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    int idPart;
+    String nom;
+    String prenom;
+    @Enumerated(EnumType.STRING)
+    Tache tache;
+    @ManyToMany
+    @JsonIgnoreProperties({"participants", "logistics"}) // évite la boucle JSON Participant -> Event -> Participant
+    Set<Event> events;
+}
+
+// APRÈS — participant-service : plus aucune référence à Event (autre service, autre base)
+@Entity
+public class Participant implements Serializable {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    Integer idPart;
+    String nom;
+    String prenom;
+    @Enumerated(EnumType.STRING)
+    Tache tache;
+}
+```
+
+**Avant / après : la requête de `calculCout`.**
+
+```java
+// AVANT — une requête JPA qui traverse la jointure Event↔Participant (même base)
+eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache("Tounsi", "Ahmed", Tache.ORGANISATEUR);
+
+// APRÈS — participant-service expose la recherche ; event-service l'appellera par Feign
+@GetMapping("/search")
+public List<ParticipantDTO> search(@RequestParam String nom, @RequestParam String prenom, @RequestParam Tache tache)
+```

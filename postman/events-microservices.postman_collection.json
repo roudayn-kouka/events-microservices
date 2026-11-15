@@ -1,0 +1,409 @@
+{
+  "info": {
+    "name": "Events FST — microservices Spring Cloud",
+    "description": "Toutes les requêtes passent par l'API Gateway ({{gateway}}). Générée par postman/generate.py.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "participant-service",
+      "description": "**participant-service** — repris de `feature/participant (Farah Baraket)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/participant/add` | `POST /api/participants` |\n| `GET /events/participant/all` | `GET /api/participants` |\n| `GET /events/participant/{id}` | `GET /api/participants/{id}` |\n| `PUT /events/participant/update/{id}` | `PUT /api/participants/{id}` |\n| `PUT /events/participant/{id}/tache/{tache}` | `PUT /api/participants/{id}/tache/{tache}` |\n| `DELETE /events/participant/delete/{id}` | `DELETE /api/participants/{id}` |\n| `POST /events/event/addPart` | `POST /api/participants` |\n| `(nouveau, pour Feign)` | `GET /api/participants?ids=1,2` |\n| `(nouveau, pour calculCout)` | `GET /api/participants/search?nom=&prenom=&tache=` |",
+      "item": [
+        {
+          "name": "Créer un participant (organisateur)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('participantId', pm.response.json().idPart);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/participants",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Tounsi\",\n  \"prenom\": \"Ahmed\",\n  \"tache\": \"ORGANISATEUR\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Créer un participant (invitée)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('participantId2', pm.response.json().idPart);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/participants",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Ben Salah\",\n  \"prenom\": \"Amira\",\n  \"tache\": \"INVITE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Lister les participants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire un participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "{{participantId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire un lot (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants?ids={{participantId}},{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{participantId}},{{participantId2}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Rechercher (calculCout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/search?nom=Tounsi&prenom=Ahmed&tache=ORGANISATEUR",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "nom",
+                  "value": "Tounsi"
+                },
+                {
+                  "key": "prenom",
+                  "value": "Ahmed"
+                },
+                {
+                  "key": "tache",
+                  "value": "ORGANISATEUR"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier un participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/participants/{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "{{participantId2}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Ben Salah\",\n  \"prenom\": \"Amira\",\n  \"tache\": \"SERVEUR\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Changer la tâche",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/{{participantId2}}/tache/ANIMATEUR",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "{{participantId2}}",
+                "tache",
+                "ANIMATEUR"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : participant inconnu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/999999",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : nom vide (validation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/participants",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"\",\n  \"prenom\": \"X\",\n  \"tache\": \"INVITE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : tâche inconnue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/{{participantId}}/tache/PILOTE",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "{{participantId}}",
+                "tache",
+                "PILOTE"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "participantId",
+      "value": "1"
+    },
+    {
+      "key": "participantId2",
+      "value": "2"
+    }
+  ]
+}

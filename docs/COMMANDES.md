@@ -70,8 +70,43 @@ Convention de commit : `type(portée): message EVT-xx`, avec `type` ∈ feat, fi
 | S3 | `docker compose exec mysql sh -c 'mysql -uevent_user -p"$EVENT_DB_PASSWORD" -e "USE db_participant;"'` | Isolation entre services | `ERROR 1044 … Access denied for user 'event_user'@'%' to database 'db_participant'` |
 | S4 | Client MySQL (Workbench, DBeaver) sur `localhost:3307` | Connexion depuis Windows (3306 = MySQL Windows) | — |
 
+## Outils de la ligne de commande
+
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| O1 | `sudo apt install -y jq` | Installer jq (formatage et filtrage du JSON dans le terminal) | Déjà présent : `jq --version` → `jq-1.8.1` |
+| O2 | `curl -s … \| jq` | Rendre les réponses JSON lisibles dans les captures | JSON indenté et coloré |
+
+## Services métier
+
+Toutes les requêtes passent par la Gateway (`localhost:8088`). Variable utile : `G=http://localhost:8088/api/participants`.
+
+### participant-service
+
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| P1 | `mvn -B -pl common,participant-service -am install` | Compiler et tester le service | 41 tests verts (+ 5 pour `common`) |
+| P2 | `make up` puis `make health` | Démarrer et vérifier | `participant-service : UP dans Eureka` et `répond via la Gateway` |
+| P3 | `curl -s -X POST $G -H "Content-Type: application/json" -d '{"nom":"Tounsi","prenom":"Ahmed","tache":"ORGANISATEUR"}' \| jq` | Créer un participant | `201`, `{"idPart":1,"nom":"Tounsi",…}` |
+| P4 | `curl -s $G \| jq` | Lister | Tableau des participants |
+| P5 | `curl -s "$G?ids=1,2" \| jq 'map(.idPart)'` | Lecture par lot (utilisée par Feign) | `[1,2]` |
+| P6 | `curl -s "$G/search?nom=Tounsi&prenom=Ahmed&tache=ORGANISATEUR" \| jq` | Recherche (calculCout) | Le participant 1 |
+| P7 | `curl -s -X PUT $G/2/tache/ANIMATEUR \| jq` | Changer la tâche | `"tache":"ANIMATEUR"` |
+| P8 | `curl -s $G/999 \| jq` | Participant inconnu | `{"status":404,"message":"Participant not found with id 999",…}` |
+| P9 | `curl -s -X POST $G -H "Content-Type: application/json" -d '{"nom":"","prenom":"X","tache":"INVITE"}' \| jq` | Validation `@Valid` | `400`, `"details":["nom : le nom est obligatoire"]` |
+| P10 | `curl -s -X PUT $G/1/tache/PILOTE \| jq` | Tâche inconnue | `400`, `Valeur « PILOTE » invalide pour le paramètre tache` |
+| P11 | `curl -s -D - -o /dev/null $G \| grep -i x-instance-id` | Instance qui a répondu | `X-Instance-Id: participant-service:participant-service-1` |
+
+## Postman
+
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| N1 | `python3 postman/generate.py` | Régénérer la collection et les environnements (local, AWS) | `postman/*.json` |
+| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | participant-service : 11 requêtes, 19 assertions, 0 échec |
+| N3 | Postman → *Import* → `postman/events-microservices.postman_collection.json` et `postman/local.postman_environment.json` | Utiliser la collection dans Postman | Un dossier par service, avec le tableau des correspondances d'endpoints |
+
 ## Feign
-_Phase 2._
+_Phase 2 : event-service et feedback-service._
 
 ## Axon (CQRS)
 _Phase 3._

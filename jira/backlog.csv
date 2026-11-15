@@ -29,8 +29,8 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 28,27,Task,Script d'initialisation MySQL,"docker-entrypoint-initdb.d : bases, utilisateurs, droits minimaux",High,mysql,1,Done
 29,15,Story,Docker Compose du socle,"Healthchecks, depends_on: service_healthy, profils core / lite",High,docker,3,Done
 30,29,Task,Fichier .env.example,Variables de mots de passe sans aucune valeur réelle ; .env ignoré par Git,Medium,docker,1,Done
-31,4,Story,participant-service,"CRUD, tâches, DTO + Mapper (branche de Farah), recherche par nom/prénom/tâche",Highest,services,3,To Do
-32,31,Task,Reprise des tests participant,"Tests Mockito et intégration de feature/participant adaptés (JUnit 5, Jakarta)",High,tests,2,To Do
+31,4,Story,participant-service,"CRUD, tâches, DTO + Mapper (branche de Farah), recherche par nom/prénom/tâche",Highest,services,3,Done
+32,31,Task,Reprise des tests participant,"Tests Mockito et intégration de feature/participant adaptés (JUnit 5, Jakarta)",High,tests,2,Done
 33,4,Story,logistics-service,"CRUD, réservation, coût (branche d'Ahlem), lecture par liste d'ID",Highest,services,3,To Do
 34,33,Task,Reprise des tests logistique,Tests de feature/logistics adaptés,High,tests,2,To Do
 35,4,Story,event-service : lecture et affectations,"GET liste et détail (absents du monolithe), affectations participant/logistique (branche de Nour)",Highest,services,3,To Do
