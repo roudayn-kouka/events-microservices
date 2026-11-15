@@ -87,3 +87,4 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 86,17,Story,THEORIE,Questions/réponses de l'oral avec lien vers le code,High,docs,2,To Do
 87,17,Story,Plan de présentation,"Slides par technologie, statistics-service en avant",High,docs,2,To Do
 88,17,Task,"README, APRES-PUSH et ETAT-FINAL","Démarrage en une commande, procédure après push, état final",High,docs,1,To Do
+89,4,Story,"statistics-service, version AVANT CQRS","Mon module : statistiques calculées par Feign (event, participant, logistics, feedback), source interchangeable StatsSource, en-tête X-Stats-Source ; base de comparaison de la phase 6",Highest,services,3,Done

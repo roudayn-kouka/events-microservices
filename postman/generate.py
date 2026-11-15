@@ -145,7 +145,7 @@ SERVICES = [
     },
     {
         "nom": "feedback-service",
-        "origine": "feature/feedback (ouemnaa)",
+        "origine": "feature/feedback (Emna, ouemnaa)",
         "correspondance": [
             ("POST /events/feedback/{idEvent}/{idPart}", "POST /api/feedback/{idEvent}/{idPart} (vérifs par Feign)"),
             ("GET /events/feedback/event/{id}", "GET /api/feedback/event/{id}"),
@@ -187,6 +187,38 @@ SERVICES = [
              {"note": 4}, 404, None),
             ("Supprimer un avis", "DELETE", "/api/feedback/{{feedbackId}}", None, 204, None),
             ("Erreur 404 : avis déjà supprimé", "DELETE", "/api/feedback/{{feedbackId}}", None, 404, None),
+        ],
+    },
+    {
+        "nom": "statistics-service (mon module) — AVANT CQRS",
+        "origine": "feature/event-statistics (Roudayna Kouka) + note moyenne de feature/feedback",
+        "correspondance": [
+            ("GET /events/event-stats", "GET /api/stats/events"),
+            ("GET /events/event-stats/{id}", "GET /api/stats/events/{id} (UUID)"),
+            ("GET /events/event-stats/summary", "GET /api/stats/summary"),
+            ("GET /events/event-stats/upcoming", "GET /api/stats/upcoming"),
+            ("GET /events/event-stats/between/{d1}/{d2}", "GET /api/stats/between/{d1}/{d2}"),
+            ("(nouveau)", "en-tête X-Stats-Source : feign-avant-cqrs (phase 2) / projections (phase 6)"),
+        ],
+        "requetes": [
+            ("Résumé global (4 services lus par Feign)", "GET", "/api/stats/summary", None, 200,
+             "pm.test('Version AVANT CQRS', () => pm.expect(pm.response.headers.get('X-Stats-Source'))"
+             ".to.eql('feign-avant-cqrs'));"),
+            ("Statistiques de tous les événements", "GET", "/api/stats/events", None, 200, None),
+            ("Statistiques d'un événement", "GET", "/api/stats/events/{{eventId}}", None, 200,
+             "pm.test('Coût réservé = 250, 2 participants', () => {\n"
+             "  pm.expect(pm.response.json().coutLogistiqueReservee).to.eql(250);\n"
+             "  pm.expect(pm.response.json().nbParticipants).to.eql(2);\n});"),
+            ("Statistiques de l'événement terminé", "GET", "/api/stats/events/{{feedbackEventId}}", None, 200,
+             "pm.test('Durée inclusive = 2 jours', () => pm.expect(pm.response.json().dureeJours).to.eql(2));"),
+            ("Événements à venir", "GET", "/api/stats/upcoming", None, 200, None),
+            ("Événements d'une période", "GET", "/api/stats/between/2026-12-01/2026-12-31", None, 200,
+             "pm.test('Contient l\\'événement de décembre', () => pm.expect(pm.response.json()"
+             ".some(s => s.idEvent === pm.collectionVariables.get('eventId'))).to.be.true);"),
+            ("Erreur 400 : intervalle inversé", "GET", "/api/stats/between/2026-12-31/2026-01-01", None, 400, None),
+            ("Erreur 400 : date invalide", "GET", "/api/stats/between/2026-13-01/2026-12-31", None, 400, None),
+            ("Erreur 404 : événement inconnu", "GET", "/api/stats/events/00000000-0000-0000-0000-000000000000",
+             None, 404, None),
         ],
     },
 ]

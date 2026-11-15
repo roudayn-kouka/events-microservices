@@ -59,4 +59,24 @@ Pour chaque capture : ce qu'il faut ouvrir, et ce qui doit être visible.
 - [ ] **C35 — Panne d'event-service (AVANT Resilience4j)** : terminal, commande FB9. Visible : `503` pour un nouvel avis, mais `/moyennes` répond `200` (lecture locale). À comparer à la phase 4.
 - [ ] **C36 — Postman** : dossier `feedback-service` et Newman : 53 requêtes, 97 assertions, 0 échec.
 
+### ⭐ statistics-service (mon module) — VERSION AVANT CQRS
+
+- [ ] **C37 — Les 5 services dans Eureka** : `http://localhost:8761` et `make health`. Visible : les 7 applications UP, et `statistics-service : répond via la Gateway`.
+- [ ] **C38 — Résumé global** : terminal, commande ST2. Visible : le JSON du tableau de bord (`nbEvents`, `tauxReservation`, `participantsParTache`, `noteMoyenne`).
+- [ ] **C39 — Statistiques d'un événement noté** : terminal, commande ST3. Visible : durée, participants par tâche, coût réservé, `averageRating` lue dans feedback-service.
+- [ ] **C40 — AVANT CQRS : source et latence** : terminal, commandes ST5 et ST6. Visible : `X-Stats-Source: feign-avant-cqrs`, puis les 5 temps de réponse (environ 40 ms).
+- [ ] **C41 — AVANT CQRS : un service en panne rend les statistiques indisponibles** : terminal, commande ST8. Visible : `feedback-service` arrêté → `/api/stats/summary` répond `503`.
+- [ ] **C42 — Postman** : dossier « statistics-service (mon module) — AVANT CQRS », et Newman : 62 requêtes, 116 assertions, 0 échec.
+
+### Comparaison AVANT / APRÈS CQRS (planifiée dès la phase 2)
+
+À la phase 6, les **mêmes commandes** (ST5, ST6, ST8) seront relancées. Les captures seront placées côte à côte sur une diapositive :
+
+| Point comparé | AVANT CQRS (phase 2) | APRÈS CQRS (phase 6) |
+|---|---|---|
+| Source (en-tête `X-Stats-Source`) | C40 : `feign-avant-cqrs` | C-CQRS-1 : projections `db_stats` |
+| Latence de `/api/stats/summary` | C40 : environ 40 ms, 4 appels réseau | C-CQRS-1 : lecture locale, 0 appel réseau |
+| feedback-service arrêté | C41 : `503` | C-CQRS-2 : `200`, dernières valeurs projetées |
+| Code du calcul (`EventStatsServiceImpl`) | inchangé | inchangé (seule la `StatsSource` change) |
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._

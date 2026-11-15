@@ -119,4 +119,16 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Preuve** : `FeedbackConcurrencyIntegrationTest` lance deux requêtes en même temps et obtient toujours exactement un `201` et un `409`.
 - **Ce qui a changé avec les microservices** : la contrainte reste locale, car les deux colonnes sont dans `db_feedback`. En revanche, la clé étrangère vers l'événement n'existe plus : l'existence de l'événement est vérifiée par Feign au moment de l'écriture (Q10).
 
+### Q14. Pourquoi une version « AVANT CQRS » de statistics-service, et quelles sont ses limites ?
+
+- **But** : disposer d'une base de comparaison mesurable. Les statistiques sont d'abord calculées en **composant des appels Feign** (API composition), la solution la plus directe quand les données sont réparties entre plusieurs services. La phase 6 les calcule à partir d'une **vue locale** (CQRS).
+- **Ce qui est déjà bien fait** : les objets liés sont lus **par lots** (`?ids=1,2,3`). Une requête coûte 4 appels réseau, qu'il y ait 3 ou 300 événements, au lieu d'un appel par événement (le problème N+1 à travers le réseau).
+- **Limites mesurées** :
+  - **disponibilité** : la disponibilité des statistiques est le **produit** de celles des 4 services (4 services à 99 % → environ 96 %). Arrêter feedback-service seul donne un 503 (C41) ;
+  - **latence** : la somme des allers-retours réseau, environ 40 ms en local (C40), et plus sur un vrai réseau ;
+  - **charge** : chaque lecture de tableau de bord interroge les bases des services d'écriture ;
+  - **cohérence** : les 4 lectures ne sont pas faites au même instant (pas de transaction distribuée) ; un événement peut changer entre deux appels.
+- **Ce que CQRS change à la phase 6** : statistics-service tient sa propre vue (`db_stats`), mise à jour par les événements publiés dans Axon. La lecture devient locale : 0 appel réseau, et elle répond même si les services d'écriture sont arrêtés. En contrepartie, la vue est **cohérente à terme** (un court délai après une écriture), et l'on peut la **reconstruire** par replay.
+- **Pourquoi le calcul ne change pas** : il dépend de l'interface `StatsSource`, pas de Feign. La bascule ne touche que la source : c'est le principe d'inversion des dépendances, et ce qui rend la comparaison honnête.
+
 _Les questions suivantes sont ajoutées au fil des phases : CQRS vs CRUD, event sourcing, états du circuit breaker, Gateway vs LoadBalancer, tracing, Terraform…_
