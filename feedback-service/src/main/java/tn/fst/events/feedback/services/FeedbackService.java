@@ -22,7 +22,7 @@ import tn.fst.events.feedback.entities.Feedback;
 import tn.fst.events.feedback.repositories.FeedbackRepository;
 
 /**
- * Repris de feature/feedback (ouemnaa). Les règles et leur ordre sont inchangés :
+ * Repris de feature/feedback (Emna, ouemnaa). Les règles et leur ordre sont inchangés :
  * note 1 à 5 → événement existant → participant existant et inscrit → événement terminé → pas de doublon.
  * Changements : EventRepository et ParticipantRepository (autres bases) deviennent des appels
  * OpenFeign ; « participant associé » se lit dans les inscrits de l'événement (participantIds),

@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Repris de feature/feedback (ouemnaa). Les relations @ManyToOne Event et Participant (autres
+ * Repris de feature/feedback (Emna, ouemnaa). Les relations @ManyToOne Event et Participant (autres
  * bases) deviennent des identifiants ; la contrainte d'unicité (un avis par participant et par
  * événement) est conservée telle quelle, sur les mêmes colonnes.
  */

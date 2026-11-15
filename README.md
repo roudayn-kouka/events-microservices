@@ -13,7 +13,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 |---|---|---|
 | 0 | Monorepo, POM parent, GitFlow, backlog JIRA, livrables | Terminée |
 | 1 | Socle : Config Server, Eureka, Gateway, MySQL, Docker Compose | Terminée |
-| 2 | Services métier + Feign | En cours : participant, logistics, event, feedback faits (4/5) |
+| 2 | Services métier + Feign | 5/5 services faits (statistics en version AVANT CQRS) ; reste le script de démonstration |
 
 ## Prérequis
 
@@ -55,12 +55,13 @@ events-microservices/
 ├── logistics-service/      Logistique et coût réservé (8103, db_logistics)
 ├── event-service/          Événements, Feign, calculCout (8101, db_event)
 ├── feedback-service/       Avis sur les événements terminés, Feign (8104, db_feedback)
+├── statistics-service/     ⭐ Mon module : statistiques (8105), version AVANT CQRS via Feign
 ├── config-repo/            Configuration de référence (un YAML par service)
 ├── config-overrides/       Surcharges à chaud des scénarios de panne (non versionnées)
 ├── docker/mysql/init/      Création des bases et utilisateurs par service
 ├── docker-compose.yml      Stack locale (profils core, lite…)
 ├── Makefile                make up / down / health…
 ├── scripts/                init-env.sh, health.sh
-├── jira/                   Backlog importable (EVT-1 à EVT-88)
+├── jira/                   Backlog importable (EVT-1 à EVT-89)
 └── docs/                   Plan, commandes, captures, théorie, scénario, présentation
 ```

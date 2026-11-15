@@ -1,0 +1,13 @@
+# Tests : ni Config Server ni Eureka ; aucune base (version AVANT CQRS)
+spring:
+  application:
+    name: statistics-service
+  cloud:
+    config:
+      enabled: false
+eureka:
+  client:
+    enabled: false
+logging:
+  level:
+    root: warn

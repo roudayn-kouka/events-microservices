@@ -1343,7 +1343,7 @@
     },
     {
       "name": "feedback-service",
-      "description": "**feedback-service** — repris de `feature/feedback (ouemnaa)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/feedback/{idEvent}/{idPart}` | `POST /api/feedback/{idEvent}/{idPart} (vérifs par Feign)` |\n| `GET /events/feedback/event/{id}` | `GET /api/feedback/event/{id}` |\n| `GET /events/feedback/event/{id}/moyenne` | `GET /api/feedback/event/{id}/moyenne` |\n| `DELETE /events/feedback/{id}` | `DELETE /api/feedback/{id}` |\n| `GET /events/event-stats (moyenne)` | `GET /api/feedback/moyennes (lu par statistics-service)` |",
+      "description": "**feedback-service** — repris de `feature/feedback (Emna, ouemnaa)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/feedback/{idEvent}/{idPart}` | `POST /api/feedback/{idEvent}/{idPart} (vérifs par Feign)` |\n| `GET /events/feedback/event/{id}` | `GET /api/feedback/event/{id}` |\n| `GET /events/feedback/event/{id}/moyenne` | `GET /api/feedback/event/{id}/moyenne` |\n| `DELETE /events/feedback/{id}` | `DELETE /api/feedback/{id}` |\n| `GET /events/event-stats (moyenne)` | `GET /api/feedback/moyennes (lu par statistics-service)` |",
       "item": [
         {
           "name": "Préparer : événement terminé (event-service)",
@@ -1887,6 +1887,292 @@
                 "api",
                 "feedback",
                 "{{feedbackId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "statistics-service (mon module) — AVANT CQRS",
+      "description": "**statistics-service (mon module) — AVANT CQRS** — repris de `feature/event-statistics (Roudayna Kouka) + note moyenne de feature/feedback`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `GET /events/event-stats` | `GET /api/stats/events` |\n| `GET /events/event-stats/{id}` | `GET /api/stats/events/{id} (UUID)` |\n| `GET /events/event-stats/summary` | `GET /api/stats/summary` |\n| `GET /events/event-stats/upcoming` | `GET /api/stats/upcoming` |\n| `GET /events/event-stats/between/{d1}/{d2}` | `GET /api/stats/between/{d1}/{d2}` |\n| `(nouveau)` | `en-tête X-Stats-Source : feign-avant-cqrs (phase 2) / projections (phase 6)` |",
+      "item": [
+        {
+          "name": "Résumé global (4 services lus par Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Version AVANT CQRS', () => pm.expect(pm.response.headers.get('X-Stats-Source')).to.eql('feign-avant-cqrs'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/summary",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Statistiques de tous les événements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "events"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Statistiques d'un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Coût réservé = 250, 2 participants', () => {\n  pm.expect(pm.response.json().coutLogistiqueReservee).to.eql(250);\n  pm.expect(pm.response.json().nbParticipants).to.eql(2);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/events/{{eventId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "events",
+                "{{eventId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Statistiques de l'événement terminé",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Durée inclusive = 2 jours', () => pm.expect(pm.response.json().dureeJours).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/events/{{feedbackEventId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "events",
+                "{{feedbackEventId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Événements à venir",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/upcoming",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "upcoming"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Événements d'une période",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Contient l\\'événement de décembre', () => pm.expect(pm.response.json().some(s => s.idEvent === pm.collectionVariables.get('eventId'))).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/between/2026-12-01/2026-12-31",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "between",
+                "2026-12-01",
+                "2026-12-31"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : intervalle inversé",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/between/2026-12-31/2026-01-01",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "between",
+                "2026-12-31",
+                "2026-01-01"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : date invalide",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/between/2026-13-01/2026-12-31",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "between",
+                "2026-13-01",
+                "2026-12-31"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : événement inconnu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/events/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "events",
+                "00000000-0000-0000-0000-000000000000"
               ]
             }
           }

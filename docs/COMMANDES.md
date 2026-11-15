@@ -31,7 +31,7 @@ Convention de commit : `type(portée): message EVT-xx`, avec `type` ∈ feat, fi
 
 | # | Action | Rôle | Résultat |
 |---|---|---|---|
-| J1 | Import de `jira/backlog.csv` (procédure dans `jira/README.md`) | Créer le backlog | Tickets EVT-1 à EVT-88, hiérarchie epic → story → tâche |
+| J1 | Import de `jira/backlog.csv` (procédure dans `jira/README.md`) | Créer le backlog | Tickets EVT-1 à EVT-89, hiérarchie epic → story → tâche |
 
 ## Config Server
 
@@ -145,19 +145,34 @@ Variables utiles : `F=http://localhost:8088/api/feedback`. `$EV` est un événem
 | FB8 | `curl -s $F/event/$EV/moyenne \| jq -c; curl -s $F/moyennes \| jq -c` | Moyenne d'un événement, moyennes de tous | `{"averageRating":5.0,"totalFeedbacks":1}` |
 | FB9 | `docker compose stop event-service; curl -s -X POST $F/$EV/1 -H "Content-Type: application/json" -d '{"note":4}' \| jq -c '{status,message}'; curl -s -o /dev/null -w '%{http_code}\n' $F/moyennes; make restart S=event-service` | Panne d'event-service (avant Resilience4j) | `503` « event-service indisponible » ; `/moyennes` → `200` |
 
+### ⭐ statistics-service (mon module) — VERSION AVANT CQRS
+
+Variable utile : `S=http://localhost:8088/api/stats`. `$EV` est un événement noté (voir FB2).
+
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| ST1 | `mvn -B -pl statistics-service -am install` puis `make up` et `make health` | Compiler, tester, démarrer | 45 tests verts ; les 5 services UP dans Eureka |
+| ST2 | `curl -s $S/summary \| jq` | Résumé global (tableau de bord) | `nbEvents`, `tauxReservation`, `participantsParTache`, `nbFeedbacks`, `noteMoyenne` |
+| ST3 | `curl -s $S/events/$EV \| jq '{description,dureeJours,nbParticipants,participantsParTache,coutLogistiqueReservee,averageRating}'` | Statistiques d'un événement | `averageRating` lue dans feedback-service |
+| ST4 | `curl -s $S/events \| jq -c '.[] \| {description,dateDebut,coutLogistiqueReservee}'`, `curl -s $S/upcoming \| jq -c 'map(.dateDebut)'`, `curl -s $S/between/2026-11-01/2026-11-30 \| jq -c 'map(.description)'` | Tous, à venir, période | Triés par date de début |
+| ST5 | `curl -s -D - -o /dev/null $S/summary \| grep -i -E 'x-stats-source\|x-instance-id'` | Version de la source | `X-Stats-Source: feign-avant-cqrs` |
+| ST6 | `for i in 1 2 3 4 5; do curl -s -o /dev/null -w '%{time_total}\n' $S/summary; done` | Latence AVANT CQRS | environ 0,040 s (4 appels Feign) |
+| ST7 | `curl -s localhost:8105/actuator/prometheus \| grep '^fst_'` | Métriques métier | `fst_events_count`, `fst_participants_count`, `fst_logistics_reserved_cost` |
+| ST8 | `docker compose stop feedback-service; curl -s $S/summary \| jq -c '{status,message}'; make restart S=feedback-service` | AVANT CQRS : un service lu est en panne | `503`, « feedback-service indisponible (pas de réponse) » |
+
 ## Postman
 
 | # | Commande | Rôle | Résultat |
 |---|---|---|---|
 | N1 | `python3 postman/generate.py` | Régénérer la collection et les environnements (local, AWS) | `postman/*.json` |
-| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | participant + logistics + event + feedback : 53 requêtes, 97 assertions, 0 échec |
+| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | les 5 services : 62 requêtes, 116 assertions, 0 échec |
 | N3 | Postman → *Import* → `postman/events-microservices.postman_collection.json` et `postman/local.postman_environment.json` | Utiliser la collection dans Postman | Un dossier par service, avec le tableau des correspondances d'endpoints |
 
 ## Feign
 
 | # | Commande | Rôle | Résultat |
 |---|---|---|---|
-| F1 | `grep -rn '@FeignClient' */src/main/java` | Lister les clients Feign | event-service → participant, logistics ; feedback-service → event, participant |
+| F1 | `grep -rn '@FeignClient' */src/main/java` | Lister les clients Feign | event → participant, logistics ; feedback → event, participant ; statistics → les 4 |
 | F2 | `curl -s localhost:8888/event-service/default/develop \| jq '.propertySources[].source \| with_entries(select(.key\|test("openfeign")))'` | Délais Feign servis par le Config Server | `connect-timeout` 2000, `read-timeout` 5000 |
 | F3 | Commande EV10 | Comportement d'un appel Feign vers un service arrêté | `503` « participant-service indisponible (pas de réponse) » |
 | F4 | Commande FB9 | Appel Feign de feedback-service vers event-service arrêté | `503` « event-service indisponible (pas de réponse) » |

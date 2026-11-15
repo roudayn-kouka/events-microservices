@@ -1,6 +1,6 @@
 # Backlog JIRA — import
 
-`backlog.csv` contient 88 tickets : 17 epics (une par technologie), 38 stories et 33 tâches.
+`backlog.csv` contient 89 tickets : 17 epics (une par technologie), 39 stories et 33 tâches. EVT-89 (statistics-service AVANT CQRS) a été ajouté pendant la phase 2 : si le backlog est déjà importé, le créer à la main sous l'epic EVT-4.
 La colonne `Issue Id` donne la clé attendue : la ligne `Issue Id = 12` devient **EVT-12**, à condition d'importer dans un projet de clé `EVT` **vide**. Les tickets sont alors créés dans l'ordre du fichier.
 
 ## Importer (Jira Cloud)
@@ -22,7 +22,7 @@ La colonne `Issue Id` donne la clé attendue : la ligne `Issue Id = 12` devient 
    | Story Points | Story point estimate |
    | Status | Status (To Do / Done) |
 
-5. Valider. Vérifier que les clés vont de **EVT-1** à **EVT-88**, et que les tickets de la phase 0 (EVT-18 à EVT-22) sont **Done**.
+5. Valider. Vérifier que les clés vont de **EVT-1** à **EVT-89**, et que les tickets de la phase 0 (EVT-18 à EVT-22) sont **Done**.
 
 ## Lien avec Git
 

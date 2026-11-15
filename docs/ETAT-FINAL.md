@@ -95,4 +95,41 @@ Les références d'entités (`toReferenceEntity`, ensembles `participants` et `l
 
 Résultat : `mvn verify` → **62 exécutions vertes** dans feedback-service (47 méthodes), couverture JaCoCo **96 %** des instructions.
 
-_Les autres services sont ajoutés au fil de la phase 2._
+### ⭐ statistics-service (mon module) — origine `feature/event-statistics` (+ `feature/event`, `feature/feedback`) — VERSION AVANT CQRS
+
+| Classe d'origine | Tests | Repris | Adaptés | Supprimés | Détail |
+|---|---:|---:|---:|---:|---|
+| `EventStatsServiceImplMockTest` (feature/event-statistics) | 9 | 0 | 9 | 0 | les trois repositories simulés deviennent la `StatsSource` simulée ; relations → ID ; requêtes JPA par date → filtre ; UUID |
+| `EventStatsServiceImplMockTest` (variante feature/feedback) | 9 | 0 | 9 | 0 | **fusionnée** avec la précédente (9 + 9 → 9) : l'assertion `averageRating` est gardée dans `testGetEventStats` |
+| `EventStatsServiceImplIntegrationTest` | 4 | 0 | 4 | 0 | plus de base locale avant CQRS : les 4 clients Feign sont remplacés par des « services distants » en mémoire ; le vrai service et la vraie `FeignStatsSource` sont testés ensemble |
+| `EventStatsControllerMockTest` | 5 | 0 | 5 | 0 | `@WebMvcTest` + `@MockitoBean` ; chemins `/stats/...` |
+| `EventStatsControllerNoMockTest` (feature/event) | 5 | 0 | 5 | 0 | faux service écrit à la main, conservé ; il implémente aussi `source()` |
+| `BusinessMetricsConfigTest` | 3 | 0 | 3 | 0 | mêmes jauges et mêmes valeurs, lues dans la `StatsSource` |
+| **Total d'origine** | **35** | **0** | **35** | **0** | 35 tests d'origine → 26 méthodes (9 fusions) |
+| Ajoutés | | | | | 19 : `FeignStatsSource` (7), service : lots, ID orphelin, tâche inconnue, moyenne pondérée, panne (5), contrôleur : `X-Stats-Source`, 404, 400, 503 (4), `RemoteCall` (2), jauge NaN en panne (1) |
+
+Résultat : `mvn verify` → **45 tests verts**, couverture JaCoCo **98 %** des instructions et 88 % des branches (objectif EVT-74 : ≥ 70 %).
+
+### Bilan de la phase 2
+
+Unité : un test `@Test` d'une version distincte de classe, comme l'inventaire initial (30 versions, **179 tests**). Les 4 tests paramétrés de feedback, comptés à part dans son tableau, ne sont pas dans l'inventaire.
+
+| Service | Tests d'origine | Repris | Adaptés | Fusionnés | Supprimés | Ajoutés | Tests du service |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| participant-service | 40 | 16 | 15 | 9 ¹ | 0 | 10 | 41 |
+| logistics-service | 19 | 18 | 1 | 0 | 0 | 10 | 29 |
+| event-service | 47 | 0 | 37 | 4 ² | 6 | 28 | 65 |
+| feedback-service | 38 | 0 | 33 (+4 paramétrés) | 0 | 5 | 10 | 47 méthodes (62 exécutions) |
+| statistics-service ⭐ | 35 | 0 | 26 | 9 ³ | 0 | 19 | 45 |
+| common | — | — | — | — | — | 5 | 5 |
+| **Total** | **179** | **34** | **112** | **22** | **11** | **82** | **232 méthodes (247 exécutions)** |
+
+1. La variante `feature/feedback` de `ParticipantServicesImplMockitoTest` ne diffère que par une variable intermédiaire. Elle est couverte par la reprise des 9 tests de `feature/participant`.
+2. Les deux variantes d'`EventRestControllerMockTest` sont fusionnées : 4 + 4 → 4.
+3. Les deux variantes d'`EventStatsServiceImplMockTest` sont fusionnées : 9 + 9 → 9.
+
+**Les 11 suppressions et leurs raisons** :
+- 4 tests de création de participant dans event-service : ce rôle appartient à participant-service, où il est testé ;
+- 2 tests de `DemoDataLoader` : un chargeur qui écrit dans 3 bases est impossible ; il est remplacé par `scripts/seed-demo.sh` (EVT-42) ;
+- 5 tests des DTO d'écriture du monolithe dans feedback (`RequestDtoMappingTest`) : ils sont remplacés par les `MapperTest` des services propriétaires.
+

@@ -215,7 +215,7 @@ float somme = ids.isEmpty() ? 0f : logisticsClient.coutReserve(ids);   // aucun 
 
 ### feedback-service (port 8104, base `db_feedback`)
 
-- **Branche d'origine** : `feature/feedback` (ouemnaa).
+- **Branche d'origine** : `feature/feedback` (Emna, ouemnaa).
 - **Changements** :
   - `@ManyToOne Event` et `@ManyToOne Participant` deviennent `eventId` (UUID) et `participantId`. La contrainte d'unicité `uk_feedback_event_participant` est conservée sur les mêmes colonnes : un seul avis par participant et par événement, garanti par la base, même avec deux requêtes simultanées ;
   - les règles et leur ordre ne changent pas (note de 1 à 5 → événement existant → participant existant **et** inscrit → événement terminé → pas de doublon). Mais l'événement et le participant sont lus par **OpenFeign** (event-service, participant-service) ;
@@ -258,4 +258,63 @@ boolean associated = participant.getEvents() != null && participant.getEvents().
 RemoteCall.call("participant-service", "Participant not found",
         () -> participantClient.getParticipant(participantId));
 boolean associated = event.participantIds() != null && event.participantIds().contains(participantId);
+```
+
+### ⭐ statistics-service — mon module (port 8105) — VERSION AVANT CQRS
+
+- **Branche d'origine** : `feature/event-statistics` (Roudayna Kouka), plus la note moyenne des avis ajoutée sur `feature/feedback`.
+- **Ce qui ne change pas** : toutes les règles de calcul de mon module :
+  - durée inclusive ;
+  - répartition par tâche, avec toutes les tâches présentes, même à 0 ;
+  - nombre, coût et taux de la logistique **réservée** ;
+  - tri par date de début ;
+  - événements à venir ;
+  - intervalle invalide → 400 ;
+  - métriques `fst.*` pour Grafana.
+- **Changements** :
+  - les trois repositories (une seule base) sont remplacés par une interface **`StatsSource`**. Le calcul (`EventStatsServiceImpl`) ne connaît que cette interface ;
+  - **AVANT CQRS** (cette version, phase 2) : `FeignStatsSource` lit les 4 services métier à chaque requête. Les objets liés sont lus **en lots** : 4 appels par requête, quel que soit le nombre d'événements, au lieu d'un appel par événement ;
+  - **APRÈS CQRS** (phase 6) : une source lira les projections locales de `db_stats`, alimentées par les événements Axon. Le calcul reste identique : la comparaison porte sur la seule source ;
+  - chaque réponse porte l'en-tête **`X-Stats-Source`** (`feign-avant-cqrs` ici), pour montrer la version en démonstration ;
+  - ajouts : note moyenne et nombre d'avis, par événement et global (moyenne **pondérée** par le nombre d'avis) ;
+  - `db_stats` existe déjà, mais reste vide jusqu'à la phase 6.
+- **Limites mesurées de la version AVANT CQRS**, à comparer à la phase 6 :
+  - **disponibilité** : si feedback-service seul est arrêté, `/api/stats/summary` répond **503** (capture C41) ;
+  - **latence** : environ **40 ms** par `/summary`, pour 4 appels réseau (capture C40) ;
+  - **charge** : chaque lecture de statistiques sollicite les bases des services d'écriture.
+- **Tests** : 35 tests d'origine (2 variantes du test de service fusionnées) : tous adaptés, aucun supprimé ; 19 ajoutés, soit **45 au total**. Couverture **98 %** des instructions (objectif ≥ 70 %, EVT-74).
+
+| Monolithe (`/events`, port 8089) | Microservices (via la Gateway, port 8088) |
+|---|---|
+| `GET /events/event-stats` | `GET /api/stats/events` |
+| `GET /events/event-stats/{id}` | `GET /api/stats/events/{id}` (UUID) |
+| `GET /events/event-stats/summary` | `GET /api/stats/summary` |
+| `GET /events/event-stats/upcoming` | `GET /api/stats/upcoming` |
+| `GET /events/event-stats/between/{d1}/{d2}` | `GET /api/stats/between/{d1}/{d2}` |
+| — | en-tête `X-Stats-Source` : `feign-avant-cqrs` (phase 2), projections (phase 6) |
+
+**Avant / après : d'où viennent les données.**
+
+```java
+// AVANT — monolithe (feature/event-statistics) : trois repositories, une seule base
+EventRepository eventRepository;
+ParticipantRepository participantRepository;
+LogisticsRepository logisticsRepository;
+Set<Participant> participants = event.getParticipants();      // relation JPA
+
+// APRÈS (phase 2, AVANT CQRS) — une source interchangeable ; ici, 4 services lus par Feign
+StatsSource source;                                            // FeignStatsSource
+Map<Integer, ParticipantDTO> participants = source.participants(ids(events, EventDTO::participantIds))…;
+// un seul lot de participants, un seul lot de logistique, une seule lecture des moyennes
+```
+
+**Avant / après : le même calcul, la même règle.**
+
+```java
+// AVANT : boucle sur la relation JPA
+for (Logistics l : logistics) { if (l.isReserve()) { nbReservees++; cout += l.getPrixUnit() * l.getQuantite(); } }
+
+// APRÈS : mêmes règles, sur les DTO lus par lots
+List<LogisticsDTO> reservees = logistics.stream().filter(LogisticsDTO::reserve).toList();
+float cout = coutReserve(reservees);                           // somme prixUnit × quantite
 ```
