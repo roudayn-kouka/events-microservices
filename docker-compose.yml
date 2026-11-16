@@ -148,6 +148,25 @@ services:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8102/actuator/health | grep -q '\"status\":\"UP\"'"]
 
+  # Phase 5 (LoadBalancer) : 2e instance, profil core seulement. Même image ; Eureka l'enregistre
+  # sous le même nom, la Gateway et Feign répartissent (round robin). X-Instance-Id la désigne.
+  participant-service-2:
+    <<: *spring-service
+    image: events/participant-service:local
+    profiles: [core]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: participant-service-2
+      DB_HOST: mysql
+      DB_PORT: 3306
+      PARTICIPANT_DB_PASSWORD: ${PARTICIPANT_DB_PASSWORD}
+    ports: ["8112:8102"]
+    depends_on:
+      participant-service: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8102/actuator/health | grep -q '\"status\":\"UP\"'"]
+
   logistics-service:
     <<: *spring-service
     build: ./logistics-service
@@ -217,6 +236,26 @@ services:
       STATS_DB_PASSWORD: ${STATS_DB_PASSWORD}
     ports: ["8105:8105"]
     depends_on: *depends-socle
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8105/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # Phase 5 : 2e instance de mon module. Les deux partagent db_stats et le jeton du processeur
+  # « statistiques » (token_entry) : un seul segment, donc une seule instance projette à un instant
+  # donné ; les deux répondent aux requêtes (QueryGateway, routées par Axon Server).
+  statistics-service-2:
+    <<: *spring-service
+    image: events/statistics-service:local
+    profiles: [core]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: statistics-service-2
+      DB_HOST: mysql
+      DB_PORT: 3306
+      STATS_DB_PASSWORD: ${STATS_DB_PASSWORD}
+    ports: ["8115:8105"]
+    depends_on:
+      statistics-service: { condition: service_healthy }
     healthcheck:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8105/actuator/health | grep -q '\"status\":\"UP\"'"]
