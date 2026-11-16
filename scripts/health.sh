@@ -89,6 +89,19 @@ for service in participant-service statistics-service; do
   fi
 done
 
+# Phase 6 (observabilité) : contrôles faits seulement si les conteneurs tournent
+tourne() { docker compose ps --services --status running 2>/dev/null | grep -qx "$1"; }
+prometheus_pret() { curl -s localhost:9091/-/ready | grep -q Ready; }
+cibles_up() { [[ "$(curl -s localhost:9091/api/v1/targets | jq '[.data.activeTargets[] | select(.health == "up")] | length')" -ge 8 ]]; }
+grafana_ok() { curl -s localhost:3001/api/health | grep -q '"database": *"ok"'; }
+zipkin_ok() { curl -s localhost:9411/health | grep -q UP; }
+if tourne prometheus; then
+  controle "Prometheus prêt (9091)" prometheus_pret
+  controle "Prometheus : au moins 8 cibles UP (découvertes par Eureka)" cibles_up
+fi
+tourne grafana && controle "Grafana (3001)" grafana_ok
+tourne zipkin && controle "Zipkin (9411)" zipkin_ok
+
 echo "Registre Eureka : $(apps_eureka)"
 if (( echecs == 0 )); then
   echo "Tout est opérationnel."

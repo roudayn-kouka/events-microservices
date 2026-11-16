@@ -18,7 +18,7 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 11 | **CQRS Axon (mon module)** | Agrégat, commandes, projections dans statistics-service, replay, comparaison AVANT / APRÈS | C44 à C52 |
 | 12 | Résilience4j | Configuration, fallbacks, 5 pannes, circuit OPEN → HALF_OPEN → CLOSED | C53 à C60 |
 | 13 | LoadBalancer | 2 instances, répartition 50 / 50 prouvée, bascule invisible, replay à 2 instances | C61 à C64 |
-| 14 | Observabilité | Prometheus, Grafana (circuit breaker), Zipkin | _phase 6_ |
+| 14 | Observabilité | Prometheus (découverte Eureka), 3 tableaux de bord Grafana, trace Zipkin de bout en bout, alertes | C65 à C71 |
 | 15 | Swagger et Postman | API agrégées, collection | _phase 7_ |
 | 16 | Sécurité (non implémentée, choix de périmètre) | Comment on sécuriserait la Gateway : OAuth2 / JWT (THEORIE Q19) | — |
 | 17 | Angular | Écrans, **dashboard statistiques** | _phase 9_ |
@@ -477,3 +477,29 @@ filters:
 ```
 
 **Mon module avec 2 instances** : elles partagent `db_stats` et le jeton du processeur. **Une seule projette** à un instant donné (un segment), les deux répondent aux requêtes. Le replay se fait par `make replay` : arrêt de l'instance 2, reset sur 8105, compteurs identiques, redémarrage, 2 instances UP (THEORIE Q25).
+
+## Observabilité (phase 6) — slide 14
+
+| Brique | Ce qui est en place | Où |
+|---|---|---|
+| Métriques | `/actuator/prometheus` sur chaque service ; **Prometheus découvre les instances par Eureka** (`eureka_sd_configs`) : les 2es instances sont scrappées sans configuration ; 11 cibles UP | http://localhost:9091 |
+| Tableaux de bord | Grafana provisionné au démarrage (sources Prometheus et Zipkin, 3 tableaux générés) : **JVM et HTTP** (débit, p95, 5xx, heap, CPU, GC, Hikari), **Resilience4j** (état des circuits, taux d'échec, appels refusés, Retry, TimeLimiter, RateLimiter, durée des appels Feign), **Métier** (indicateurs de mon module, répartition de charge par instance) | http://localhost:3001 (consultation sans compte) |
+| Traces | Micrometer Tracing (Brave) → Zipkin ; la Gateway et Feign propagent le contexte ; `[traceId-spanId]` dans chaque ligne de log | http://localhost:9411 |
+| Alertes | `InstanceInjoignable`, `ServiceAbsent`, `CircuitOuvert` (OPEN ou HALF_OPEN), `LatenceP95Elevee` (plus de 2 s), `Erreurs5xx` | http://localhost:9091/alerts |
+
+**Trace mesurée** : `GET /api/events/{id}/details` donne **7 spans**, sur api-gateway → event-service → participant-service et logistics-service, avec un seul traceId.
+
+**Avant / après : la trace qui traverse le TimeLimiter.**
+
+```java
+// AVANT : l'appel Feign s'exécute dans un thread du TimeLimiter → contexte de trace perdu,
+//         la trace Zipkin s'arrêterait à event-service
+Executors.newCachedThreadPool(...)
+// APRÈS : le contexte de l'appelant (trace en cours) est recopié dans le thread de l'appel
+ContextExecutorService.wrap(executor, ContextSnapshotFactory.builder().build()::captureAll)
+// → logs du thread « feign-timelimiter » : [6afb6de0…-8993d79d…], même traceId que la Gateway
+```
+
+**Deux défauts trouvés en réel** :
+- les mesures Feign étaient rejetées par Prometheus : un conflit d'étiquettes avec `http.client.requests` de Spring. Elles sont renommées `feign.client.requests` ;
+- une alerte sur l'état OPEN seul disparaissait au bout de 10 s (passage à HALF_OPEN) : elle couvre maintenant OPEN et HALF_OPEN.

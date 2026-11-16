@@ -17,6 +17,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 | 3 | CQRS Axon : agrégat event-sourcé, publications, projections et requêtes de statistics-service, replay | Terminée |
 | 4 | Resilience4j (Retry, RateLimiter, CircuitBreaker, TimeLimiter), fallbacks, 5 pannes (`make panne N=1..5`) | Terminée |
 | 5 | LoadBalancer : 2 instances de participant et de statistics, `make repartition`, `make replay` | Terminée |
+| 6 | Observabilité : Prometheus (découverte Eureka), Grafana (3 tableaux de bord), Zipkin, alertes | Terminée |
 
 ## Prérequis
 
@@ -47,6 +48,9 @@ make down     # arrêt (données conservées)
 | Routes de la Gateway | http://localhost:8088/actuator/gateway/routes |
 | Eureka | http://localhost:8761 |
 | Axon Server (event store, commandes, requêtes) | http://localhost:8024 |
+| Prometheus (cibles, alertes) | http://localhost:9091 |
+| Grafana (dossier « Events FST ») | http://localhost:3001 |
+| Zipkin (traces) | http://localhost:9411 |
 | Config Server | http://localhost:8888/{service}/default |
 | MySQL | `localhost:3307` (une base et un utilisateur par service) |
 

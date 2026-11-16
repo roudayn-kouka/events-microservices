@@ -1,0 +1,54 @@
+# =============================================================================
+#  Alertes Prometheus (phase 6, EVT-63). Visibles dans http://localhost:9091/alerts
+#  (sans Alertmanager : en production, il les enverrait par e-mail, Slack…).
+# =============================================================================
+groups:
+  - name: events-disponibilite
+    rules:
+      # Instance encore dans Eureka mais qui ne répond plus (plantage, blocage)
+      - alert: InstanceInjoignable
+        expr: up{job=~"services|eureka-server"} == 0
+        for: 30s
+        labels: {severite: critique}
+        annotations:
+          resume: "{{ $labels.instance }} ne répond plus à Prometheus"
+
+      # Service absent d'Eureka (arrêté proprement : son instance s'est désinscrite)
+      - alert: ServiceAbsent
+        expr: >
+          absent(up{eureka_app="EVENT-SERVICE"}) or absent(up{eureka_app="PARTICIPANT-SERVICE"})
+          or absent(up{eureka_app="LOGISTICS-SERVICE"}) or absent(up{eureka_app="FEEDBACK-SERVICE"})
+          or absent(up{eureka_app="STATISTICS-SERVICE"}) or absent(up{eureka_app="API-GATEWAY"})
+        for: 30s
+        labels: {severite: critique}
+        annotations:
+          resume: "{{ $labels.eureka_app }} n'a plus aucune instance enregistrée dans Eureka"
+
+  - name: events-resilience
+    rules:
+      # OPEN, puis HALF_OPEN au bout de 10 s : l'alerte dure tant que le circuit n'est pas refermé
+      - alert: CircuitOuvert
+        expr: max by (application, name, state) (resilience4j_circuitbreaker_state{state=~"open|half_open"}) == 1
+        for: 0s
+        labels: {severite: majeure}
+        annotations:
+          resume: "{{ $labels.application }} : circuit « {{ $labels.name }} » {{ $labels.state }} (service appelé en panne)"
+
+  - name: events-performance
+    rules:
+      - alert: LatenceP95Elevee
+        expr: >
+          histogram_quantile(0.95, sum by (le, application)
+            (rate(http_server_requests_seconds_bucket{uri!~"/actuator.*"}[1m]))) > 2
+        for: 1m
+        labels: {severite: mineure}
+        annotations:
+          resume: "{{ $labels.application }} : latence p95 de {{ $value | humanizeDuration }} (seuil 2 s)"
+
+      - alert: Erreurs5xx
+        expr: >
+          sum by (application) (rate(http_server_requests_seconds_count{status=~"5..",uri!~"/actuator.*"}[1m])) > 0.2
+        for: 1m
+        labels: {severite: majeure}
+        annotations:
+          resume: "{{ $labels.application }} : {{ $value | humanize }} erreurs 5xx par seconde"

@@ -10,6 +10,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 3 — CQRS Axon | 2026-11-16 15:35 | 2026-11-16 17:10 | 1 h 35 | 2 j | agrégat, publications, projections et requêtes de statistics-service, replay |
 | 4 — Resilience4j et pannes | 2026-11-16 19:46 | 2026-11-16 21:10 | 1 h 24 | 1 j | 4 mécanismes sur tous les appels Feign, fallbacks, Gateway 503, 5 pannes |
 | 5 — LoadBalancer | 2026-11-16 21:12 | 2026-11-16 21:40 | 28 min | 0,5 j | 2 instances, 50 / 50 Gateway et Feign, bascule sans erreur, replay à 2 instances |
+| 6 — Observabilité | 2026-11-16 21:42 | 2026-11-16 22:15 | 33 min | 1 j | Prometheus (Eureka), Grafana (3 tableaux), Zipkin (trace de bout en bout), 5 alertes |
 
 ## Phase 3 — CQRS Axon
 
@@ -53,6 +54,22 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   2. un replay sur l'instance sans jeton donnait un 500 (`UnableToClaimTokenException`) : refus 409 explicite, et `make replay` (arrêt de l'instance 2, reset sur 8105), comme tu l'as demandé ;
   3. le replay de Postman passe par la Gateway : il accepte 202 ou 409.
 - **Vérifié** : 336 tests verts ; 50 / 50 mesuré ; `make health` vert ; Newman 0 échec (deux exécutions).
+
+## Phase 6 — Observabilité
+
+- **Début** : 2026-11-16 21:42 — **fin** : 22:15 — **durée réelle** : 33 min — estimation : 1 j.
+- **Fait** :
+  - Micrometer Tracing et Zipkin sur 6 applications, et `feign-micrometer` ;
+  - Prometheus v3.15.1 avec découverte Eureka et 5 règles d'alerte ;
+  - Grafana 13.0.13 (version choisie avec toi, pour Trivy) provisionné, avec 3 tableaux de bord générés ;
+  - Zipkin 3.6.1 ;
+  - contrôles d'observabilité dans `make health`.
+- **Problèmes et corrections** :
+  1. trace coupée au changement de thread du TimeLimiter : `context-propagation` ;
+  2. mesures Feign rejetées (conflit d'étiquettes) : `MeterFilter`, `feign.client.requests` ;
+  3. alerte `CircuitOuvert` invisible au bout de 10 s : OPEN ou HALF_OPEN.
+- **Observé, non corrigé** : 35 s après l'arrêt simultané des 2 instances de participant-service, Eureka en listait encore une. `ServiceAbsent` reste donc en attente pendant cette fenêtre ; `InstanceInjoignable` couvre ce cas.
+- **Vérifié** : 337 tests verts ; trace de 7 spans ; 11 cibles UP ; `make health` vert ; Newman 0 échec.
 
 ## Périmètre révisé (2026-11-16, à la demande)
 

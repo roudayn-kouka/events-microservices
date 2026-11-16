@@ -169,3 +169,17 @@ Total : **336 tests verts**. Vérifié en réel :
 - `make replay` avec 2 instances ;
 - `make health` (2 instances UP chacun) ;
 - Newman 64 requêtes, 0 échec. Avec 2 instances, le replay de Postman accepte 202 ou le 409 explicite.
+
+## Phase 6 — Observabilité : tests et vérifications
+
+| Module | Avant | Après | Ajoutés |
+|---|---:|---:|---|
+| common | 19 | 20 | 1 : mesures Feign renommées, mesures du client HTTP de Spring conservées |
+
+Total : **337 tests verts**. Vérifié en réel :
+- 11 cibles Prometheus UP, découvertes par Eureka ;
+- 3 tableaux de bord provisionnés ; requêtes vérifiées (p95, métriques métier, mémoire) ;
+- trace de 7 spans sur 4 services ;
+- traceId dans les logs, y compris dans le thread du TimeLimiter ;
+- alertes : `CircuitOuvert` « firing » pendant une panne, 5 règles saines ;
+- `make health` vert (contrôles d'observabilité ajoutés) ; Newman 64 requêtes, 0 échec.

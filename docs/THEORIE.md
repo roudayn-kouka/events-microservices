@@ -209,6 +209,23 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
   - **le reset piloté depuis Axon Server**, qui connaît tous les processeurs de toutes les instances : il les met en pause partout, remet les jetons à zéro, puis relance, sans arrêter de conteneur ;
   - ou une projection reconstruite **à côté** (nouveau nom de processeur et nouvelles tables), puis une bascule quand elle a rattrapé le flux : aucune interruption des lectures.
 
+## Observabilité (phase 6)
+
+### Q26. Métriques, logs, traces : à quoi sert chacun, et comment Prometheus trouve-t-il les services ?
+
+- **Métriques** (Prometheus) : des nombres agrégés dans le temps (débit, p95, mémoire, état des circuits). On s'en sert pour les tableaux de bord et les **alertes**. C'est peu coûteux, mais sans le détail d'une requête.
+- **Traces** (Zipkin) : le parcours d'**une** requête à travers les services, chaque étape étant un *span* avec sa durée. On répond ainsi à « où est passé le temps ? ». Le `traceparent` (W3C) est propagé par la Gateway et par Feign.
+- **Logs** : le détail d'un événement. Le `traceId` dans chaque ligne relie un log à sa trace.
+- **Découverte** : Prometheus lit Eureka (`eureka_sd_configs`) et scrute chaque instance enregistrée. Ajouter une instance (phase 5) ne demande aucune configuration. C'est le même principe que la Gateway et Feign : **un seul annuaire**.
+- **Échantillonnage** : 100 % des requêtes sont tracées pour la démonstration. En production, on se limiterait à 5 à 10 %, car chaque span coûte du réseau et du stockage.
+
+### Q27. Pourquoi la trace aurait-elle pu se couper, et quels pièges de métriques avez-vous rencontrés ?
+
+- **Changement de thread** : le contexte de trace vit dans le thread courant (*ThreadLocal*). Le TimeLimiter exécute l'appel Feign dans un autre thread, et sans précaution la trace s'arrêtait à event-service. La bibliothèque `context-propagation` (`ContextExecutorService`) recopie le contexte. Preuve : le même traceId dans les logs du thread `feign-timelimiter` et dans Zipkin.
+- **Conflit d'étiquettes** : Prometheus impose les mêmes étiquettes pour un même nom de métrique. Feign et le client HTTP de Spring publiaient tous deux `http.client.requests`, et les mesures Feign étaient rejetées. Un `MeterFilter` les renomme `feign.client.requests`.
+- **Alerte trop fugace** : un circuit OPEN passe HALF_OPEN au bout de 10 s. L'alerte porte donc sur « pas CLOSED » (OPEN ou HALF_OPEN).
+- **Latence p95** : il faut des histogrammes (`percentiles-histogram`) pour que Prometheus calcule `histogram_quantile` sur toutes les instances. Des percentiles calculés dans chaque JVM ne s'additionnent pas.
+
 ## Sécurité (non implémentée : choix de périmètre)
 
 ### Q19. Comment sécuriseriez-vous la Gateway et les services ?

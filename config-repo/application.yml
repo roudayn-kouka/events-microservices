@@ -42,6 +42,14 @@ axon:
     messages: jackson
 
 management:
+  # Observabilité (phase 6) : toutes les requêtes tracées (démonstration ; 10 % en production),
+  # envoyées à Zipkin ; traceId et spanId ajoutés aux logs par Spring Boot.
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
   health:
     circuitbreakers:
       enabled: true
@@ -60,6 +68,10 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+    distribution:
+      # histogrammes pour calculer la latence p95 dans Prometheus (tableau de bord HTTP, alerte)
+      percentiles-histogram:
+        http.server.requests: true
 
 info:
   application: ${spring.application.name}
