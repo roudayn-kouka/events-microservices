@@ -30,9 +30,11 @@ appel() { # <méthode> <chemin> [corps]
   local sortie code duree
   sortie=$(mktemp)
   if [[ $# -ge 3 ]]; then
-    read -r code duree < <(curl -s -o "$sortie" -w '%{http_code} %{time_total}' -X "$1" "$G$2" -H "$J" -d "$3")
+    read -r code duree < <(curl -s -o "$sortie" -w '%{http_code} %{time_total}
+' -X "$1" "$G$2" -H "$J" -d "$3")
   else
-    read -r code duree < <(curl -s -o "$sortie" -w '%{http_code} %{time_total}' -X "$1" "$G$2")
+    read -r code duree < <(curl -s -o "$sortie" -w '%{http_code} %{time_total}
+' -X "$1" "$G$2")
   fi
   printf '   %-6s %-55s -> HTTP %s en %5.2f s  %s\n' "$1" "$2" "$code" "$duree" \
     "$(jq -r 'if type=="object" then (.message // (.avertissements // [] | join(" ; "))) else "" end' "$sortie" 2>/dev/null | cut -c1-110)"
@@ -46,10 +48,18 @@ surcharger() { # <service> <url actuator> <contenu YAML>
   rafraichir "$2"
 }
 
-retirer_surcharge() { # <service> <url actuator>
+# Retour à la normale : écrire d'abord une valeur NEUTRE puis rafraîchir, et seulement ensuite
+# supprimer le fichier. Constaté en phase 4 : si on supprime directement le fichier, le refresh
+# du client (spring.config.import) répond [] et garde l'ancienne source de propriétés jusqu'au
+# prochain redémarrage — la panne resterait active.
+retirer_surcharge() { # <service> <url actuator> <contenu YAML neutre>
+  printf '%s
+' "$3" > "config-overrides/$1.yml"
+  info "valeur neutre : $(tr '
+' ' ' < "config-overrides/$1.yml")"
+  rafraichir "$2"
   rm -f "config-overrides/$1.yml"
   info "config-overrides/$1.yml retiré"
-  rafraichir "$2"
 }
 
 rafraichir() { # <url actuator>
