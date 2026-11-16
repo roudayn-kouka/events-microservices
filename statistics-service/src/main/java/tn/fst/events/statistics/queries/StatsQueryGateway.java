@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import tn.fst.events.statistics.dto.EventStatsDTO;
 import tn.fst.events.statistics.dto.GlobalStatsDTO;
 import tn.fst.events.statistics.queries.StatsQueries.ErreurRequete;
+import tn.fst.events.statistics.queries.StatsQueries.ListeStats;
 import tn.fst.events.statistics.queries.StatsQueries.StatsAVenirQuery;
 import tn.fst.events.statistics.queries.StatsQueries.StatsEvenementQuery;
 import tn.fst.events.statistics.queries.StatsQueries.StatsEvenementsQuery;
@@ -70,7 +71,7 @@ public class StatsQueryGateway implements IEventStatsService {
     }
 
     private List<EventStatsDTO> liste(Object query) {
-        return attendre(queryGateway.query(query, ResponseTypes.multipleInstancesOf(EventStatsDTO.class)));
+        return attendre(queryGateway.query(query, ResponseTypes.instanceOf(ListeStats.class))).elements();
     }
 
     private static <R> R attendre(CompletableFuture<R> reponse) {

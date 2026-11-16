@@ -1,6 +1,5 @@
 package tn.fst.events.statistics.queries;
 
-import java.util.List;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.queryhandling.QueryExecutionException;
@@ -10,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 import tn.fst.events.statistics.dto.EventStatsDTO;
 import tn.fst.events.statistics.dto.GlobalStatsDTO;
 import tn.fst.events.statistics.queries.StatsQueries.ErreurRequete;
+import tn.fst.events.statistics.queries.StatsQueries.ListeStats;
 import tn.fst.events.statistics.queries.StatsQueries.StatsAVenirQuery;
 import tn.fst.events.statistics.queries.StatsQueries.StatsEvenementQuery;
 import tn.fst.events.statistics.queries.StatsQueries.StatsEvenementsQuery;
@@ -29,8 +29,8 @@ public class StatsQueryHandlers {
     private final EventStatsServiceImpl calcul;
 
     @QueryHandler
-    public List<EventStatsDTO> handle(StatsEvenementsQuery query) {
-        return executer(calcul::getAllEventsStats);
+    public ListeStats handle(StatsEvenementsQuery query) {
+        return new ListeStats(executer(calcul::getAllEventsStats));
     }
 
     @QueryHandler
@@ -39,13 +39,13 @@ public class StatsQueryHandlers {
     }
 
     @QueryHandler
-    public List<EventStatsDTO> handle(StatsAVenirQuery query) {
-        return executer(calcul::getUpcomingEventsStats);
+    public ListeStats handle(StatsAVenirQuery query) {
+        return new ListeStats(executer(calcul::getUpcomingEventsStats));
     }
 
     @QueryHandler
-    public List<EventStatsDTO> handle(StatsPeriodeQuery query) {
-        return executer(() -> calcul.getEventsStatsBetween(query.d1(), query.d2()));
+    public ListeStats handle(StatsPeriodeQuery query) {
+        return new ListeStats(executer(() -> calcul.getEventsStatsBetween(query.d1(), query.d2())));
     }
 
     @QueryHandler

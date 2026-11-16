@@ -25,7 +25,7 @@ up: env ## Construit les images et démarre la stack (attend que tout soit « he
 
 restart: ## Reconstruit et recrée un service, branche Git courante gardée : make restart S=logistics-service
 	@test -n "$(S)" || { echo "Préciser le service : make restart S=<service>"; exit 1; }
-	CONFIG_GIT_LABEL=$(BRANCHE) $(COMPOSE) $(PROFILES) up -d --build --force-recreate --wait $(S)
+	CONFIG_GIT_LABEL=$(BRANCHE) $(COMPOSE) $(PROFILES) up -d --build --force-recreate --no-deps --wait $(S)
 
 down: ## Arrête la stack (les volumes de données sont conservés)
 	$(COMPOSE) --profile '*' down
