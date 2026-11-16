@@ -8,7 +8,7 @@ BRANCHE   := $(shell git branch --show-current)
 PROFILES  ?= --profile core
 
 .DEFAULT_GOAL := help
-.PHONY: help env build up restart down ps logs health seed panne repartition
+.PHONY: help env build up restart down ps logs health seed panne repartition replay
 
 help: ## Liste des commandes
 	@awk -F ':.*## ' '/^[a-z-]+:.*## / { printf "  make %-8s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -48,3 +48,6 @@ panne: ## Joue un scénario de panne et le rétablit : make panne N=1 (1 à 5, v
 
 repartition: ## Mesure la répartition de charge entre les 2 instances (Gateway, Feign, bascule)
 	@bash scripts/repartition.sh
+
+replay: ## Replay coordonné de la projection CQRS de statistics-service (toutes les instances)
+	@bash scripts/replay.sh
