@@ -198,7 +198,7 @@ SERVICES = [
             ("GET /events/event-stats/summary", "GET /api/stats/summary"),
             ("GET /events/event-stats/upcoming", "GET /api/stats/upcoming"),
             ("GET /events/event-stats/between/{d1}/{d2}", "GET /api/stats/between/{d1}/{d2}"),
-            ("(nouveau)", "en-tête X-Stats-Source : feign-avant-cqrs (phase 2) / projections (phase 6)"),
+            ("(nouveau)", "en-tête X-Stats-Source : feign-avant-cqrs (phase 2) / projections (phase 3)"),
         ],
         "requetes": [
             ("Résumé global (4 services lus par Feign)", "GET", "/api/stats/summary", None, 200,

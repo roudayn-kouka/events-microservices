@@ -178,7 +178,7 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8104/actuator/health | grep -q '\"status\":\"UP\"'"]
 
   # Mon module. VERSION AVANT CQRS : aucune base, lit les 4 services métier par Feign.
-  # La 2e instance (8115) et db_stats (projections Axon) arrivent aux phases 5 et 6.
+  # db_stats (projections Axon) arrive à la phase 3, la 2e instance (8115) à la phase 5.
   statistics-service:
     <<: *spring-service
     build: ./statistics-service

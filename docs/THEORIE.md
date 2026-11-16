@@ -128,7 +128,7 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
   - **latence** : la somme des allers-retours réseau, environ 40 ms en local (C40), et plus sur un vrai réseau ;
   - **charge** : chaque lecture de tableau de bord interroge les bases des services d'écriture ;
   - **cohérence** : les 4 lectures ne sont pas faites au même instant (pas de transaction distribuée) ; un événement peut changer entre deux appels.
-- **Ce que CQRS change à la phase 6** : statistics-service tient sa propre vue (`db_stats`), mise à jour par les événements publiés dans Axon. La lecture devient locale : 0 appel réseau, et elle répond même si les services d'écriture sont arrêtés. En contrepartie, la vue est **cohérente à terme** (un court délai après une écriture), et l'on peut la **reconstruire** par replay.
+- **Ce que CQRS change à la phase 3** : statistics-service tient sa propre vue (`db_stats`), mise à jour par les événements publiés dans Axon. La lecture devient locale : 0 appel réseau, et elle répond même si les services d'écriture sont arrêtés. En contrepartie, la vue est **cohérente à terme** (un court délai après une écriture), et l'on peut la **reconstruire** par replay.
 - **Pourquoi le calcul ne change pas** : il dépend de l'interface `StatsSource`, pas de Feign. La bascule ne touche que la source : c'est le principe d'inversion des dépendances, et ce qui rend la comparaison honnête.
 
 _Les questions suivantes sont ajoutées au fil des phases : CQRS vs CRUD, event sourcing, états du circuit breaker, Gateway vs LoadBalancer, tracing, Terraform…_

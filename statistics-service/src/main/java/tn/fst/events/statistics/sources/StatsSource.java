@@ -13,7 +13,7 @@ import tn.fst.events.statistics.clients.ParticipantDTO;
  * D'où viennent les données des statistiques. C'est le point de bascule avant / après CQRS :
  * <ul>
  *   <li>AVANT CQRS (phase 2) : {@link FeignStatsSource}, lecture des quatre services à chaque requête ;</li>
- *   <li>APRÈS CQRS (phase 6) : lecture des projections locales de db_stats, alimentées par Axon.</li>
+ *   <li>APRÈS CQRS (phase 3) : lecture des projections locales de db_stats, alimentées par Axon.</li>
  * </ul>
  * Le calcul des statistiques (EventStatsServiceImpl) ne dépend que de cette interface.
  */

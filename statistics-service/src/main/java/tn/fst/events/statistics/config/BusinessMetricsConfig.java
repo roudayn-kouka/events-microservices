@@ -10,7 +10,7 @@ import tn.fst.events.statistics.clients.LogisticsDTO;
 import tn.fst.events.statistics.sources.StatsSource;
 
 /**
- * Métriques métier exposées sur /actuator/prometheus (tableau de bord Grafana, phase 7).
+ * Métriques métier exposées sur /actuator/prometheus (tableau de bord Grafana, phase 6).
  * Repris de feature/event-statistics : mêmes noms de jauges. Les valeurs viennent de la
  * {@link StatsSource} au lieu des repositories. AVANT CQRS, chaque lecture d'une jauge appelle un
  * service ; s'il est en panne, la jauge vaut NaN (trou dans la courbe) au lieu de faire échouer

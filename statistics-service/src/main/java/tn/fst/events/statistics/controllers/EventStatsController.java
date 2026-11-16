@@ -30,7 +30,7 @@ public class EventStatsController {
 
     IEventStatsService eventStatsService;
 
-    /** Chaque réponse indique sa source de données : « feign-avant-cqrs » ici, les projections à la phase 6. */
+    /** Chaque réponse indique sa source de données : « feign-avant-cqrs » ici, les projections à la phase 3. */
     @ModelAttribute
     void indiquerSource(HttpServletResponse response) {
         String source = eventStatsService.source();

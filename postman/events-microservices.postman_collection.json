@@ -1895,7 +1895,7 @@
     },
     {
       "name": "statistics-service (mon module) — AVANT CQRS",
-      "description": "**statistics-service (mon module) — AVANT CQRS** — repris de `feature/event-statistics (Roudayna Kouka) + note moyenne de feature/feedback`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `GET /events/event-stats` | `GET /api/stats/events` |\n| `GET /events/event-stats/{id}` | `GET /api/stats/events/{id} (UUID)` |\n| `GET /events/event-stats/summary` | `GET /api/stats/summary` |\n| `GET /events/event-stats/upcoming` | `GET /api/stats/upcoming` |\n| `GET /events/event-stats/between/{d1}/{d2}` | `GET /api/stats/between/{d1}/{d2}` |\n| `(nouveau)` | `en-tête X-Stats-Source : feign-avant-cqrs (phase 2) / projections (phase 6)` |",
+      "description": "**statistics-service (mon module) — AVANT CQRS** — repris de `feature/event-statistics (Roudayna Kouka) + note moyenne de feature/feedback`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `GET /events/event-stats` | `GET /api/stats/events` |\n| `GET /events/event-stats/{id}` | `GET /api/stats/events/{id} (UUID)` |\n| `GET /events/event-stats/summary` | `GET /api/stats/summary` |\n| `GET /events/event-stats/upcoming` | `GET /api/stats/upcoming` |\n| `GET /events/event-stats/between/{d1}/{d2}` | `GET /api/stats/between/{d1}/{d2}` |\n| `(nouveau)` | `en-tête X-Stats-Source : feign-avant-cqrs (phase 2) / projections (phase 3)` |",
       "item": [
         {
           "name": "Résumé global (4 services lus par Feign)",

@@ -16,7 +16,7 @@
     <!--
       AVANT CQRS (phase 2) : aucune base ; les statistiques sont calculées à chaque requête à partir
       d'event-service, participant-service, logistics-service et feedback-service (OpenFeign).
-      APRÈS CQRS (phase 6) : JPA + db_stats (projections Axon) et le token store y seront ajoutés.
+      APRÈS CQRS (phase 3) : JPA + db_stats (projections Axon) et le token store y seront ajoutés.
     -->
     <dependencies>
         <dependency>

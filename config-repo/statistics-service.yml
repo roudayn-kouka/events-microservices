@@ -1,6 +1,6 @@
 # statistics-service (mon module) — VERSION AVANT CQRS : aucune base, lecture des 4 services
 # métier par OpenFeign. La base db_stats (stats_user) existe déjà : elle recevra les projections
-# Axon à la phase 6.
+# Axon à la phase 3.
 server:
   port: ${SERVER_PORT:8105}
 

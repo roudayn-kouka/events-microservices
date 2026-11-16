@@ -74,9 +74,9 @@ Pour chaque capture : ce qu'il faut ouvrir, et ce qui doit être visible.
 
 ### Comparaison AVANT / APRÈS CQRS (planifiée dès la phase 2)
 
-À la phase 6, les **mêmes commandes** (ST5, ST6, ST8) seront relancées. Les captures seront placées côte à côte sur une diapositive :
+À la phase 3, les **mêmes commandes** (ST5, ST6, ST8) seront relancées. Les captures seront placées côte à côte sur une diapositive :
 
-| Point comparé | AVANT CQRS (phase 2) | APRÈS CQRS (phase 6) |
+| Point comparé | AVANT CQRS (phase 2) | APRÈS CQRS (phase 3) |
 |---|---|---|
 | Source (en-tête `X-Stats-Source`) | C40 : `feign-avant-cqrs` | C-CQRS-1 : projections `db_stats` |
 | Latence de `/api/stats/summary` | C40 : environ 40 ms, 4 appels réseau | C-CQRS-1 : lecture locale, 0 appel réseau |

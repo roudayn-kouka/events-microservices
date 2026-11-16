@@ -145,7 +145,7 @@ public float getCoutReserve(@RequestParam("ids") List<Integer> ids)
 
 - **Branche d'origine** : `feature/event` (Nour Mustapha). Les corrections de `feature/feedback` sont reprises : participant introuvable → 404, participants obligatoires → 400, `getLogisticsDates` ne renvoie plus `null`. Les tests viennent aussi de `feature/event-statistics` et `feature/participant`.
 - **Changements** :
-  - identifiant `int` → **UUID `String`**, prêt pour l'agrégat Axon de la phase 6 (THEORIE Q1) ;
+  - identifiant `int` → **UUID `String`**, prêt pour l'agrégat Axon de la phase 3 (THEORIE Q1) ;
   - les relations `@ManyToMany(mappedBy = "events") Set<Participant>` et `@OneToMany Set<Logistics>` deviennent des **ensembles d'ID** (`@ElementCollection Set<Integer> participantIds / logisticsIds`, tables `event_participant` et `event_logistics` dans `db_event`) ;
   - les accès directs à `ParticipantRepository` et `LogisticsRepository` (autres bases) sont remplacés par **deux clients OpenFeign** (`participant-service`, `logistics-service`, résolus par Eureka). `RemoteCall` traduit les erreurs : 404 distant → 404, service en panne → **503 explicite** (avant Resilience4j, phase 4) ;
   - `calculCout` : la jointure JPA `findByParticipants_Nom…` devient une recherche Feign de l'organisateur, puis un appel Feign `cout-reserve` par événement. Le cron est réglable dans `config-repo/event-service.yml`, et un déclenchement manuel `POST /events/cout/recalcul` est ajouté ;
@@ -274,11 +274,11 @@ boolean associated = event.participantIds() != null && event.participantIds().co
 - **Changements** :
   - les trois repositories (une seule base) sont remplacés par une interface **`StatsSource`**. Le calcul (`EventStatsServiceImpl`) ne connaît que cette interface ;
   - **AVANT CQRS** (cette version, phase 2) : `FeignStatsSource` lit les 4 services métier à chaque requête. Les objets liés sont lus **en lots** : 4 appels par requête, quel que soit le nombre d'événements, au lieu d'un appel par événement ;
-  - **APRÈS CQRS** (phase 6) : une source lira les projections locales de `db_stats`, alimentées par les événements Axon. Le calcul reste identique : la comparaison porte sur la seule source ;
+  - **APRÈS CQRS** (phase 3) : une source lira les projections locales de `db_stats`, alimentées par les événements Axon. Le calcul reste identique : la comparaison porte sur la seule source ;
   - chaque réponse porte l'en-tête **`X-Stats-Source`** (`feign-avant-cqrs` ici), pour montrer la version en démonstration ;
   - ajouts : note moyenne et nombre d'avis, par événement et global (moyenne **pondérée** par le nombre d'avis) ;
-  - `db_stats` existe déjà, mais reste vide jusqu'à la phase 6.
-- **Limites mesurées de la version AVANT CQRS**, à comparer à la phase 6 :
+  - `db_stats` existe déjà, mais reste vide jusqu'à la phase 3.
+- **Limites mesurées de la version AVANT CQRS**, à comparer à la phase 3 :
   - **disponibilité** : si feedback-service seul est arrêté, `/api/stats/summary` répond **503** (capture C41) ;
   - **latence** : environ **40 ms** par `/summary`, pour 4 appels réseau (capture C40) ;
   - **charge** : chaque lecture de statistiques sollicite les bases des services d'écriture.
@@ -291,7 +291,7 @@ boolean associated = event.participantIds() != null && event.participantIds().co
 | `GET /events/event-stats/summary` | `GET /api/stats/summary` |
 | `GET /events/event-stats/upcoming` | `GET /api/stats/upcoming` |
 | `GET /events/event-stats/between/{d1}/{d2}` | `GET /api/stats/between/{d1}/{d2}` |
-| — | en-tête `X-Stats-Source` : `feign-avant-cqrs` (phase 2), projections (phase 6) |
+| — | en-tête `X-Stats-Source` : `feign-avant-cqrs` (phase 2), projections (phase 3) |
 
 **Avant / après : d'où viennent les données.**
 
