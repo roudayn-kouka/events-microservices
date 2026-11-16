@@ -16,6 +16,19 @@ spring:
 eureka:
   client:
     enabled: false
+# Axon sans Axon Server : bus de commandes local et event store JPA sur H2
+axon:
+  axonserver:
+    enabled: false
+  # même sérialiseur qu'en production (config-repo/application.yml, non importé ici)
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
+  eventhandling:
+    processors:
+      event-lecture:
+        mode: subscribing
 events:
   cout:
     cron: "-"

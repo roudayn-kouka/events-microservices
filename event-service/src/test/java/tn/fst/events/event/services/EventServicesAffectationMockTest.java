@@ -3,6 +3,7 @@ package tn.fst.events.event.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -16,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,21 +28,20 @@ import tn.fst.events.event.clients.LogisticsClient;
 import tn.fst.events.event.clients.LogisticsDTO;
 import tn.fst.events.event.clients.ParticipantClient;
 import tn.fst.events.event.clients.ParticipantDTO;
+import tn.fst.events.event.commands.EventCommands.AffecterLogistique;
+import tn.fst.events.event.commands.EventCommands.CreateEvent;
+import tn.fst.events.event.commands.EventCommands.UpdateEventCost;
 import tn.fst.events.event.entities.Event;
 import tn.fst.events.event.repositories.EventRepository;
 
 /**
  * Repris de feature/event-statistics (10 tests AVEC Mockito : affectations, logistique, coût).
- * 9 adaptés, 1 supprimé : testAddParticipant (la création d'un participant appartient
- * désormais à participant-service, où elle est testée).
- * Adaptations : les repositories Participant et Logistics deviennent les clients Feign simulés ;
- * les relations JPA deviennent les ensembles d'ID participantIds et logisticsIds de l'événement ;
- * - addAffectLog sauvegarde TOUJOURS l'événement : les ID de logistique sont stockés dans
- *   db_event (dans le monolithe, la table de jointure était écrite par la sauvegarde de la
- *   logistique, d'où le « never save » quand l'ensemble existait déjà) ;
- * - événement sans logistique : liste vide au lieu de null (correction de feature/feedback) ;
- * - calculCout : la somme du réservé est calculée par logistics-service (GET /cout-reserve),
- *   le filtre « réservé seulement » y est testé ; ici, on vérifie l'appel et la remise à zéro.
+ * Phase 2 : 9 adaptés, 1 supprimé (testAddParticipant : rôle de participant-service) ; relations
+ * JPA → ensembles d'ID ; clients Feign simulés ; liste vide au lieu de null sans logistique ;
+ * somme du réservé calculée par logistics-service.
+ * Phase 3 (CQRS) : les écritures sont des commandes. « l'événement est sauvegardé avec son nouvel
+ * ensemble » devient « la commande CreateEvent / AffecterLogistique / UpdateEventCost est
+ * envoyée » ; la mise à jour de la table event est le rôle de la projection (testée à part).
  */
 @ExtendWith(MockitoExtension.class)
 class EventServicesAffectationMockTest {
@@ -51,6 +52,8 @@ class EventServicesAffectationMockTest {
     ParticipantClient participantClient;
     @Mock
     LogisticsClient logisticsClient;
+    @Mock
+    CommandGateway commandGateway;
 
     @InjectMocks
     EventServicesImpl eventServices;
@@ -74,16 +77,21 @@ class EventServicesAffectationMockTest {
         return new LogisticsDTO(id, description, reserve, prixUnit, quantite);
     }
 
+    private CreateEvent creation(Event e, Set<Integer> participants) {
+        return new CreateEvent(e.getIdEvent(), e.getDescription(), e.getDateDebut(), e.getDateFin(), participants);
+    }
+
     @Test
     void testAddAffectEvenParticipantSansEvenementsExistants() {
         Event event = buildEvent("Hackathon"); // participantIds == null
         when(participantClient.getParticipant(1)).thenReturn(buildParticipant(1));
-        when(eventRepository.save(event)).thenReturn(event);
+        when(eventRepository.findById("hackathon")).thenReturn(Optional.of(event));
 
         Event result = eventServices.addAffectEvenParticipant(event, 1);
 
         assertSame(event, result);
         assertEquals(Set.of(1), event.getParticipantIds());
+        verify(commandGateway).sendAndWait(creation(event, Set.of(1)));
     }
 
     @Test
@@ -91,12 +99,13 @@ class EventServicesAffectationMockTest {
         Event event = buildEvent("Hackathon");
         event.setParticipantIds(new HashSet<>(Collections.singletonList(2))); // déjà un inscrit
         when(participantClient.getParticipant(1)).thenReturn(buildParticipant(1));
-        when(eventRepository.save(event)).thenReturn(event);
+        when(eventRepository.findById("hackathon")).thenReturn(Optional.of(event));
 
         eventServices.addAffectEvenParticipant(event, 1);
 
         assertEquals(2, event.getParticipantIds().size());
         assertTrue(event.getParticipantIds().containsAll(Set.of(1, 2)));
+        verify(commandGateway).sendAndWait(creation(event, Set.of(1, 2)));
     }
 
     @Test
@@ -105,14 +114,14 @@ class EventServicesAffectationMockTest {
         event.setParticipantIds(new HashSet<>(Arrays.asList(1, 2)));
         when(participantClient.getParticipants(event.getParticipantIds()))
                 .thenReturn(List.of(buildParticipant(1), buildParticipant(2)));
-        when(eventRepository.save(event)).thenReturn(event);
+        when(eventRepository.findById("hackathon")).thenReturn(Optional.of(event));
 
         Event result = eventServices.addAffectEvenParticipant(event);
 
         assertSame(event, result);
         assertEquals(Set.of(1, 2), event.getParticipantIds());
         verify(participantClient, times(1)).getParticipants(Set.of(1, 2)); // un seul appel pour le lot
-        verify(eventRepository, times(1)).save(event);
+        verify(commandGateway, times(1)).sendAndWait(creation(event, Set.of(1, 2)));
     }
 
     @Test
@@ -126,8 +135,7 @@ class EventServicesAffectationMockTest {
         LogisticsDTO result = eventServices.addAffectLog(chaises, "Hackathon");
 
         assertSame(creee, result);
-        assertEquals(Collections.singleton(7), event.getLogisticsIds());
-        verify(eventRepository).save(event); // l'événement est sauvegardé avec son nouvel ensemble
+        verify(commandGateway).sendAndWait(new AffecterLogistique("hackathon", 7)); // l'ID créé est rattaché
     }
 
     @Test
@@ -140,8 +148,8 @@ class EventServicesAffectationMockTest {
 
         eventServices.addAffectLog(chaises, "Hackathon");
 
-        assertEquals(Set.of(3, 7), event.getLogisticsIds());
-        verify(eventRepository).save(event); // adapté : les ID vivent dans db_event
+        verify(commandGateway, times(1)).sendAndWait(new AffecterLogistique("hackathon", 7));
+        verify(commandGateway, times(1)).sendAndWait(any()); // une seule commande : seule la nouvelle est rattachée
     }
 
     @Test
@@ -198,10 +206,12 @@ class EventServicesAffectationMockTest {
 
         assertEquals(490f, avecLogistique.getCout(), 0.001);
         assertEquals(0f, sansLogistique.getCout(), 0.001); // somme remise à zéro par événement
-        ArgumentCaptor<Event> saved = ArgumentCaptor.forClass(Event.class);
-        verify(eventRepository, times(2)).save(saved.capture());
-        assertEquals(Arrays.asList(avecLogistique, sansLogistique), saved.getAllValues());
+        ArgumentCaptor<Object> commandes = ArgumentCaptor.forClass(Object.class);
+        verify(commandGateway, times(2)).sendAndWait(commandes.capture());
+        assertEquals(List.of(new UpdateEventCost("hackathon", 490f), new UpdateEventCost("forum", 0f)),
+                commandes.getAllValues());
         verify(logisticsClient, times(1)).coutReserve(Set.of(1, 2, 3)); // aucun appel pour « Forum »
         verify(logisticsClient, never()).coutReserve(Set.of());
+        verify(eventRepository, never()).save(any()); // l'écriture passe par l'agrégat
     }
 }
