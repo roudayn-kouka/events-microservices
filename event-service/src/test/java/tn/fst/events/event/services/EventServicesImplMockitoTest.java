@@ -218,6 +218,22 @@ class EventServicesImplMockitoTest {
     // ---------------------------------------------------------------- ajoutés
 
     @Test
+    void unEvenementRefuseParLAgregatNeBloquePasLeCalculDesAutres() {
+        Event perdu = event("perdu");
+        Event sain = event("sain");
+        when(participantClient.search("Tounsi", "Ahmed", "ORGANISATEUR")).thenReturn(List.of(participant(5)));
+        when(eventRepository.findDistinctByParticipantIdsIn(Set.of(5))).thenReturn(List.of(perdu, sain));
+        when(commandGateway.sendAndWait(new UpdateEventCost("perdu", 0f))).thenThrow(
+                new org.axonframework.commandhandling.CommandExecutionException("absent", null,
+                        new tn.fst.events.event.commands.ErreurCommande(404, "Event not found with id perdu")));
+
+        List<Event> calcules = service.calculCout();
+
+        assertEquals(List.of(sain), calcules);
+        verify(commandGateway).sendAndWait(new UpdateEventCost("sain", 0f));
+    }
+
+    @Test
     void calculCoutSansOrganisateurNeTouchePasAuxEvenements() {
         when(participantClient.search("Tounsi", "Ahmed", "ORGANISATEUR")).thenReturn(List.of());
 

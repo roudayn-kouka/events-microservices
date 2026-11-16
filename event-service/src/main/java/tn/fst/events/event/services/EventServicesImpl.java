@@ -172,16 +172,24 @@ public class EventServicesImpl implements IEventServices {
             return List.of();
         }
         List<Event> events = eventRepository.findDistinctByParticipantIdsIn(organisateurs);
+        List<Event> calcules = new ArrayList<>();
         for (Event event : events) {
             Set<Integer> ids = logisticsIds(event);
             // somme remise à zéro pour chaque événement ; aucun appel si pas de logistique
             float somme = ids.isEmpty() ? 0f : RemoteCall.call("logistics-service", "Logistique introuvable",
                     () -> logisticsClient.coutReserve(ids));
-            envoyer(new UpdateEventCost(event.getIdEvent(), somme));
+            try {
+                envoyer(new UpdateEventCost(event.getIdEvent(), somme));
+            } catch (ResponseStatusException e) {
+                // un événement refusé (supprimé, absent de l'event store) ne bloque pas les autres
+                log.warn("Coût de l'événement {} non mis à jour : {}", event.getIdEvent(), e.getReason());
+                continue;
+            }
             // copie détachée renvoyée à l'appelant ; la table est mise à jour par la projection
             event.setCout(somme);
+            calcules.add(event);
         }
-        return events;
+        return calcules;
     }
 
     @Override
@@ -221,7 +229,8 @@ public class EventServicesImpl implements IEventServices {
         if (details instanceof Map<?, ?> champs && champs.get("status") instanceof Number status) {
             return new ResponseStatusException(HttpStatus.valueOf(status.intValue()), String.valueOf(champs.get("message")));
         }
-        if (e.getCause() instanceof AggregateNotFoundException || String.valueOf(e.getMessage()).contains("AggregateNotFound")) {
+        if (e.getCause() instanceof AggregateNotFoundException
+                || String.valueOf(e.getMessage()).contains("not found in the event store")) {
             return new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found");
         }
         return new ResponseStatusException(HttpStatus.CONFLICT, "Commande refusée : " + e.getMessage());
