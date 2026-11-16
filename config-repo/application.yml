@@ -38,10 +38,13 @@ axon:
     messages: jackson
 
 management:
+  health:
+    circuitbreakers:
+      enabled: true
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,refresh
+        include: health,info,prometheus,refresh,circuitbreakers,circuitbreakerevents,retries,ratelimiters,timelimiters
   endpoint:
     health:
       probes:

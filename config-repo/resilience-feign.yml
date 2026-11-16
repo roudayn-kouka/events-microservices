@@ -1,0 +1,51 @@
+# =============================================================================
+#  Réglages Resilience4j PARTAGÉS par les services qui appellent d'autres services en OpenFeign
+#  (event-service, feedback-service, statistics-service). Lus grâce à
+#  spring.cloud.config.name: <service>,resilience-feign (application.yml de ces services).
+#  À part de application.yml : les classes Feign citées ici n'existent pas dans la Gateway.
+# =============================================================================
+# Résilience (phase 4) des appels OpenFeign entre services : une instance par service APPELÉ
+# (participant-service, logistics-service, event-service…), créée avec ces réglages par défaut.
+# Appliqués par common/ClientsResilients : Retry( RateLimiter( CircuitBreaker( TimeLimiter( appel ) ) ) ).
+resilience4j:
+  retry:
+    configs:
+      default:
+        max-attempts: 3            # 1 appel + 2 nouvelles tentatives (lectures GET seulement)
+        wait-duration: 500ms
+        ignore-exceptions:         # erreurs métier et refus volontaires : ne pas réessayer
+          - feign.FeignException$NotFound
+          - feign.FeignException$BadRequest
+          - feign.FeignException$Conflict
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
+  ratelimiter:
+    configs:
+      default:
+        limit-for-period: 5        # 5 appels par seconde vers un même service
+        limit-refresh-period: 1s
+        timeout-duration: 1s       # attendre jusqu'à 1 s une autorisation, puis refuser (429)
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50           # OPEN si au moins 50 % d'échecs sur les 10 derniers appels
+        slow-call-duration-threshold: 4s     # un appel de plus de 4 s compte comme lent
+        slow-call-rate-threshold: 50
+        wait-duration-in-open-state: 10s     # OPEN pendant 10 s, puis HALF_OPEN
+        automatic-transition-from-open-to-half-open-enabled: true
+        permitted-number-of-calls-in-half-open-state: 3
+        register-health-indicator: true
+        allow-health-indicator-to-fail: false  # un circuit ouvert n'arrête pas le service appelant
+        ignore-exceptions:
+          - feign.FeignException$NotFound
+          - feign.FeignException$BadRequest
+          - feign.FeignException$Conflict
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 5s
+        cancel-running-future: true
+

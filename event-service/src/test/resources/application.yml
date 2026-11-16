@@ -30,6 +30,9 @@ axon:
       event-lecture:
         mode: subscribing
 events:
+  # règles métier testées sans la couche de résilience (testée dans common)
+  resilience:
+    enabled: false
   cout:
     cron: "-"
 logging:

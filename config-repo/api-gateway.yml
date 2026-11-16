@@ -27,23 +27,70 @@ spring:
             - id: event-service
               uri: lb://event-service
               predicates: [Path=/api/events/**]
-              filters: [StripPrefix=1]
+              filters:
+                - StripPrefix=1
+                # panne du service : 503 JSON explicite (au lieu d'un 500 de connexion refusée)
+                - name: CircuitBreaker
+                  args:
+                    name: gw-event-service
+                    fallbackUri: forward:/indisponible/event-service
             - id: participant-service
               uri: lb://participant-service
               predicates: [Path=/api/participants/**]
-              filters: [StripPrefix=1]
+              filters:
+                - StripPrefix=1
+                # panne du service : 503 JSON explicite (au lieu d'un 500 de connexion refusée)
+                - name: CircuitBreaker
+                  args:
+                    name: gw-participant-service
+                    fallbackUri: forward:/indisponible/participant-service
             - id: logistics-service
               uri: lb://logistics-service
               predicates: [Path=/api/logistics/**]
-              filters: [StripPrefix=1]
+              filters:
+                - StripPrefix=1
+                # panne du service : 503 JSON explicite (au lieu d'un 500 de connexion refusée)
+                - name: CircuitBreaker
+                  args:
+                    name: gw-logistics-service
+                    fallbackUri: forward:/indisponible/logistics-service
             - id: feedback-service
               uri: lb://feedback-service
               predicates: [Path=/api/feedback/**]
-              filters: [StripPrefix=1]
+              filters:
+                - StripPrefix=1
+                # panne du service : 503 JSON explicite (au lieu d'un 500 de connexion refusée)
+                - name: CircuitBreaker
+                  args:
+                    name: gw-feedback-service
+                    fallbackUri: forward:/indisponible/feedback-service
             - id: statistics-service
               uri: lb://statistics-service
               predicates: [Path=/api/stats/**]
-              filters: [StripPrefix=1]
+              filters:
+                - StripPrefix=1
+                # panne du service : 503 JSON explicite (au lieu d'un 500 de connexion refusée)
+                - name: CircuitBreaker
+                  args:
+                    name: gw-statistics-service
+                    fallbackUri: forward:/indisponible/statistics-service
+
+# CircuitBreaker de la Gateway (phase 4) : un par route. Délai large (20 s) : les services ont leurs
+# propres Retry (3 × 500 ms) et TimeLimiter (5 s) sur leurs appels Feign, qui doivent pouvoir aboutir.
+resilience4j:
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 20s
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
 
 management:
   endpoints:

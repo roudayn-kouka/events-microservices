@@ -6,6 +6,8 @@ spring:
     import: "configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
   cloud:
     config:
+      # + réglages de résilience Feign partagés (config-repo/resilience-feign.yml)
+      name: ${spring.application.name},resilience-feign
       fail-fast: true
       retry:
         initial-interval: 2000

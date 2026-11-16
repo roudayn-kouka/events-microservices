@@ -20,6 +20,13 @@ public class CommonWebAutoConfiguration {
         return new GlobalExceptionHandler();
     }
 
+    /** Pannes 2 et 3 simulées à chaud (latence, réponse corrompue) : sans effet tant que rien n'est configuré. */
+    @Bean
+    public tn.fst.events.common.pannes.PannesSimuleesFilter pannesSimuleesFilter(
+            org.springframework.core.env.Environment environment) {
+        return new tn.fst.events.common.pannes.PannesSimuleesFilter(environment);
+    }
+
     @Bean
     public InstanceIdFilter instanceIdFilter(
             @Value("${eureka.instance.instance-id:${spring.application.name:application}}") String instanceId) {
