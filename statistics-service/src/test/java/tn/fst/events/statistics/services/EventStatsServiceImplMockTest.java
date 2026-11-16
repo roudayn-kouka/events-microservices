@@ -296,4 +296,19 @@ class EventStatsServiceImplMockTest {
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, ex.getStatusCode());
         verify(source, never()).moyennes();
     }
+
+    // ---------------------------------------------------------------- ajouté (phase 3)
+
+    @Test
+    void lesNotesMoyennesSontArrondiesADeuxDecimales() {
+        when(source.evenements()).thenReturn(List.of());
+        when(source.participants()).thenReturn(List.of());
+        when(source.logistique()).thenReturn(List.of());
+        // moyennes telles que MySQL les renvoie : 13/3 -> 4.3333 (4 décimales)
+        when(source.moyennes()).thenReturn(Map.of(
+                "a", new FeedbackAverageDTO("a", 4.3333, 3), "b", new FeedbackAverageDTO("b", 4.0, 2)));
+
+        assertEquals(4.2, eventStatsService.getGlobalStats().getNoteMoyenne()); // et non 4.19998
+        assertEquals(4.33, EventStatsServiceImpl.arrondi(4.3333));
+    }
 }
