@@ -211,7 +211,14 @@ Variables utiles : `S=http://localhost:8088/api/stats`. `$EV` est l'UUID d'un é
 | R10 | `seq 30 \| xargs -P 30 -I{} sh -c "curl -s localhost:8088/api/events/$EV/details \| jq -r '(.avertissements // [] \| if length==0 then \"complet\" else .[0] end)'" \| sort \| uniq -c` | RateLimiter (5/s vers participant-service) : 30 lectures simultanées | mesuré : 11 « complet », 19 dégradées « trop d'appels (RateLimiter : 5 par 1000 ms) », toutes en HTTP 200 |
 
 ## LoadBalancer
-_Phase 5._
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| LB1 | `make up` puis `make health` | Démarrer avec les 2es instances (profil core) | `participant-service : 2 instances UP`, `statistics-service : 2 instances UP` |
+| LB2 | `curl -s -H 'Accept: application/json' localhost:8761/eureka/apps/PARTICIPANT-SERVICE \| jq -r '.application.instance[] \| "\(.instanceId) \(.status)"'` | Les 2 instances dans Eureka | `participant-service:participant-service-1 UP`, `…-2 UP` |
+| LB3 | `make repartition` | Répartition Gateway et Feign, puis bascule | 50 / 50 partout ; instance 2 arrêtée : 100 % sur l'instance 1, 0 erreur |
+| LB4 | `for i in $(seq 10); do curl -s -D - -o /dev/null localhost:8088/api/participants \| grep -i x-instance-id; done` | Voir l'alternance à la main | instances 1 et 2 en alternance |
+| LB5 | `make replay` | Replay de la projection avec 2 instances | arrêt de l'instance 2, reset sur 8105, compteurs identiques, 2 instances UP |
+| LB6 | `curl -s -X POST localhost:8115/stats/admin/replay \| jq -c '{status,message}'` | Replay demandé à l'instance qui ne détient pas le jeton | `409` « … détenu par une autre instance … (make replay) » |
 
 ## Docker / Docker Compose
 

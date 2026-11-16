@@ -2210,16 +2210,16 @@
           }
         },
         {
-          "name": "Replay : reconstruire db_stats depuis l'event store",
+          "name": "Replay (202 sur l'instance qui détient le jeton, sinon 409 explicite)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));",
+                  "pm.test('HTTP 202 ou 409', () => pm.expect([202, 409]).to.include(pm.response.code));",
                   "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
-                  "pm.test('Processeur rejoué', () => pm.expect(pm.response.json().processeur).to.eql('statistiques'));"
+                  "pm.test('Rejoué, ou refus qui indique make replay', () => {\n  if (pm.response.code === 202) pm.expect(pm.response.json().processeur).to.eql('statistiques');\n  else pm.expect(pm.response.json().message).to.include('make replay');\n});"
                 ]
               }
             }

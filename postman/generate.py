@@ -222,8 +222,11 @@ SERVICES = [
              None, 404, None),
             ("État de la projection CQRS", "GET", "/api/stats/admin/projection", None, 200,
              "pm.test('Processeur statistiques actif', () => pm.expect(pm.response.json().enCours).to.be.true);"),
-            ("Replay : reconstruire db_stats depuis l'event store", "POST", "/api/stats/admin/replay", None, 202,
-             "pm.test('Processeur rejoué', () => pm.expect(pm.response.json().processeur).to.eql('statistiques'));"),
+            ("Replay (202 sur l'instance qui détient le jeton, sinon 409 explicite)", "POST",
+             "/api/stats/admin/replay", None, (202, 409),
+             "pm.test('Rejoué, ou refus qui indique make replay', () => {\n"
+             "  if (pm.response.code === 202) pm.expect(pm.response.json().processeur).to.eql('statistiques');\n"
+             "  else pm.expect(pm.response.json().message).to.include('make replay');\n});"),
         ],
     },
 ]
@@ -231,7 +234,14 @@ SERVICES = [
 
 # ----------------------------------------------------------------------------- génération
 def requete(nom, methode, chemin, corps, attendu, script_suite):
-    tests = [f"pm.test('HTTP {attendu}', () => pm.response.to.have.status({attendu}));"]
+    # attendu : un code HTTP, ou un tuple de codes acceptés (ex. (202, 409) pour le replay à 2 instances)
+    if isinstance(attendu, tuple):
+        codes = ", ".join(str(c) for c in attendu)
+        tests = [f"pm.test('HTTP {' ou '.join(str(c) for c in attendu)}', () => "
+                 f"pm.expect([{codes}]).to.include(pm.response.code));"]
+        attendu = min(attendu)
+    else:
+        tests = [f"pm.test('HTTP {attendu}', () => pm.response.to.have.status({attendu}));"]
     if attendu < 300:
         tests.append("pm.test('Réponse produite par le service (X-Instance-Id)', () => "
                      "pm.response.to.have.header('X-Instance-Id'));")

@@ -157,3 +157,15 @@ Tous modules confondus : **318 tests verts** (`mvn verify`) ; Newman : 64 requê
 Aucun test existant supprimé. Dans les tests des règles métier, `events.resilience.enabled: false` : la résilience est testée à part, dans `common`.
 
 Total : **334 tests verts**. Les 5 pannes ont été jouées en réel et rétablies (`make panne N=1` à `5`). Newman : 64 requêtes, 0 échec ; `make health` entièrement vert.
+
+## Phase 5 — Répartition de charge : tests et vérifications
+
+| Module | Avant | Après | Ajoutés |
+|---|---:|---:|---|
+| statistics-service | 63 | 65 | 2 : replay sur l'instance qui détient le jeton ; refus 409 sur l'autre, sans laisser le processeur arrêté |
+
+Total : **336 tests verts**. Vérifié en réel :
+- répartition 50 / 50 par la Gateway et par Feign, et bascule sans erreur (`make repartition`) ;
+- `make replay` avec 2 instances ;
+- `make health` (2 instances UP chacun) ;
+- Newman 64 requêtes, 0 échec. Avec 2 instances, le replay de Postman accepte 202 ou le 409 explicite.

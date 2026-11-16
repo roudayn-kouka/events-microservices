@@ -17,7 +17,7 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 10 | Services et Feign | Relations JPA remplacées par des ID et des appels Feign | _phase 2_ |
 | 11 | **CQRS Axon (mon module)** | Agrégat, commandes, projections dans statistics-service, replay, comparaison AVANT / APRÈS | C44 à C52 |
 | 12 | Résilience4j | Configuration, fallbacks, 5 pannes, circuit OPEN → HALF_OPEN → CLOSED | C53 à C60 |
-| 13 | LoadBalancer | Répartition prouvée | _phase 5_ |
+| 13 | LoadBalancer | 2 instances, répartition 50 / 50 prouvée, bascule invisible, replay à 2 instances | C61 à C64 |
 | 14 | Observabilité | Prometheus, Grafana (circuit breaker), Zipkin | _phase 6_ |
 | 15 | Swagger et Postman | API agrégées, collection | _phase 7_ |
 | 16 | Sécurité (non implémentée, choix de périmètre) | Comment on sécuriserait la Gateway : OAuth2 / JWT (THEORIE Q19) | — |
@@ -451,3 +451,29 @@ filters:
   - name: CircuitBreaker
     args: {name: gw-logistics-service, fallbackUri: forward:/indisponible/logistics-service}
 ```
+
+## Répartition de charge (phase 5) — slide 13
+
+**Montage** : 2 instances de participant-service (8102 et 8112) et de statistics-service (8105 et 8115), profil `core`. Même image, `INSTANCE_ID` différent, même nom dans Eureka. La répartition se fait **côté client** (Spring Cloud LoadBalancer, *round robin*) : dans la Gateway (`lb://…`) et dans Feign (event-service → participant-service). Chaque réponse porte `X-Instance-Id`.
+
+**Mesuré** (`make repartition`, 20 requêtes par test) :
+
+| Chemin | Instance 1 | Instance 2 |
+|---|---|---|
+| Gateway → participant-service | 10 (50 %) | 10 (50 %) |
+| Gateway → statistics-service | 10 (50 %) | 10 (50 %) |
+| Feign : event-service → participant-service (compteurs Prometheus) | 10 | 10 |
+| participant-service-2 arrêtée | 20 (100 %), **0 erreur** | — |
+
+**Avant / après : la bascule.**
+
+```yaml
+# AVANT : pendant les secondes où la Gateway connaît encore l'instance arrêtée
+#         → 3 requêtes sur 20 en 503 ; la première attendait 14 s une connexion impossible
+# APRÈS : connexion limitée à 2 s, et Retry des lectures DANS le CircuitBreaker de la route
+- name: Retry
+  args: {retries: 2, methods: GET, series: SERVER_ERROR, exceptions: java.io.IOException, java.util.concurrent.TimeoutException}
+# → 20 lectures sur 20 réussies pendant l'arrêt
+```
+
+**Mon module avec 2 instances** : elles partagent `db_stats` et le jeton du processeur. **Une seule projette** à un instant donné (un segment), les deux répondent aux requêtes. Le replay se fait par `make replay` : arrêt de l'instance 2, reset sur 8105, compteurs identiques, redémarrage, 2 instances UP (THEORIE Q25).
