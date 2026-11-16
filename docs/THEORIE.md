@@ -95,7 +95,7 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 
 - **Le constat** : `Event` avait `@ManyToMany Set<Participant>` et `@OneToMany Set<Logistics>`. Avec une base par service (Q7), une jointure SQL entre `db_event` et `db_participant` est impossible, et une clé étrangère entre deux bases aussi.
 - **La solution retenue** : l'événement garde seulement les **identifiants** (`@ElementCollection Set<Integer> participantIds`, table `event_participant` dans `db_event`). Quand il faut les objets, event-service les demande à leur propriétaire par **OpenFeign**, en un seul appel par lot (`GET /participants?ids=1,2`), et non un appel par ID (le problème « N+1 » à travers le réseau).
-- **Ce qu'on perd** : l'intégrité référentielle. Un participant supprimé laisse un ID orphelin dans `event_participant`. Ici, l'existence est vérifiée **à l'écriture** (Feign → 404). En production, on ajouterait des **événements de domaine** (« ParticipantSupprimé » → event-service retire l'ID), ce que la phase 6 (Axon) prépare.
+- **Ce qu'on perd** : l'intégrité référentielle. Un participant supprimé laisse un ID orphelin dans `event_participant`. Ici, l'existence est vérifiée **à l'écriture** (Feign → 404). En production, on ajouterait des **événements de domaine** (« ParticipantSupprimé » → event-service retire l'ID), ce que la phase 3 (Axon) prépare.
 - **Pourquoi le calcul du coût réservé est dans logistics-service** : la règle (« réservé seulement », prix × quantité) appartient à la logistique. event-service transmet les ID et reçoit une somme. Un seul appel par événement, et aucune logique de logistique dupliquée.
 
 ### Q11. Que se passe-t-il quand participant-service est arrêté ?
@@ -121,7 +121,7 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 
 ### Q14. Pourquoi une version « AVANT CQRS » de statistics-service, et quelles sont ses limites ?
 
-- **But** : disposer d'une base de comparaison mesurable. Les statistiques sont d'abord calculées en **composant des appels Feign** (API composition), la solution la plus directe quand les données sont réparties entre plusieurs services. La phase 6 les calcule à partir d'une **vue locale** (CQRS).
+- **But** : disposer d'une base de comparaison mesurable. Les statistiques sont d'abord calculées en **composant des appels Feign** (API composition), la solution la plus directe quand les données sont réparties entre plusieurs services. La phase 3 les calcule à partir d'une **vue locale** (CQRS).
 - **Ce qui est déjà bien fait** : les objets liés sont lus **par lots** (`?ids=1,2,3`). Une requête coûte 4 appels réseau, qu'il y ait 3 ou 300 événements, au lieu d'un appel par événement (le problème N+1 à travers le réseau).
 - **Limites mesurées** :
   - **disponibilité** : la disponibilité des statistiques est le **produit** de celles des 4 services (4 services à 99 % → environ 96 %). Arrêter feedback-service seul donne un 503 (C41) ;
