@@ -22,7 +22,7 @@ La colonne `Issue Id` donne la clé attendue : la ligne `Issue Id = 12` devient 
    | Story Points | Story point estimate |
    | Status | Status (To Do / Done) |
 
-5. Valider. Vérifier que les clés vont de **EVT-1** à **EVT-89**, et que les tickets de la phase 0 (EVT-18 à EVT-22) sont **Done**.
+5. Valider. Vérifier que les clés vont de **EVT-1** à **EVT-89**. Statuts utilisés : To Do, Done et **Won't Do** (sécurité Keycloak, EVT-11 et 66 à 68, retirée du périmètre) ; si ce statut n'existe pas dans le workflow JIRA, choisir « Done » avec la résolution « Won't Do », et que les tickets de la phase 0 (EVT-18 à EVT-22) sont **Done**.
 
 ## Lien avec Git
 

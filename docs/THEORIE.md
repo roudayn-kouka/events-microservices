@@ -163,4 +163,17 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Les exceptions** ne traversent pas le réseau avec leur classe : seuls le message et les **détails** voyagent. Les règles métier sont donc emballées dans une `CommandExecutionException` ou une `QueryExecutionException`, avec `{status, message}`, puis retraduites en HTTP.
 - **Les requêtes sans paramètre** (records vides) demandent `spring.jackson.serialization.fail-on-empty-beans: false`.
 
+## Sécurité (non implémentée : choix de périmètre)
+
+### Q19. Comment sécuriseriez-vous la Gateway et les services ?
+
+- **Pourquoi ce n'est pas fait** : c'est un choix de périmètre. L'Excellence est plafonnée à 3 points et la sécurité n'est pas exigée par l'énoncé : le temps est allé au CQRS, à la résilience et à l'observabilité.
+- **Architecture visée : OAuth2 / OpenID Connect avec des jetons JWT** :
+  - un **serveur d'autorisation** (Keycloak, realm `events`) authentifie l'utilisateur et délivre un **jeton d'accès JWT**, signé RS256, avec les rôles (`ADMIN`, `USER`) dans ses *claims* ;
+  - le **frontend Angular** obtient le jeton par le flux *Authorization Code + PKCE* (jamais de mot de passe stocké côté navigateur), puis l'envoie dans `Authorization: Bearer …` ;
+  - la **Gateway** est un *resource server* (`spring-boot-starter-oauth2-resource-server`) : elle vérifie la signature avec les clés publiques du realm (`jwk-set-uri`), l'expiration, l'émetteur (`issuer-uri`) et l'audience. Elle répond **401** sans jeton valide et **403** si le rôle manque (par exemple `POST /api/stats/admin/replay` réservé à `ADMIN`) ;
+  - **défense en profondeur** : chaque service est aussi *resource server*, pour qu'un appel qui contourne la Gateway soit refusé. Feign **propage le jeton** de l'appel entrant (un `RequestInterceptor` qui recopie l'en-tête `Authorization`) ; pour les tâches planifiées comme `calculCout`, on utiliserait un jeton de service (flux *client credentials*).
+- **Ce que JWT apporte** : la vérification est locale, sans appeler Keycloak à chaque requête, donc rien ne bloque la montée en charge. La contrepartie : la révocation n'est pas immédiate, d'où des jetons à durée courte (5 minutes) et un jeton de rafraîchissement.
+- **Ce qu'il faudrait adapter ici** : scripts de panne et Postman (obtenir un jeton automatiquement), Swagger (bouton *Authorize*), et un interrupteur `security.enabled` dans `config-repo` pour les démonstrations.
+
 _Les questions suivantes sont ajoutées au fil des phases : CQRS vs CRUD, event sourcing, états du circuit breaker, Gateway vs LoadBalancer, tracing, Terraform…_

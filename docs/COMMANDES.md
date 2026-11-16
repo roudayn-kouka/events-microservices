@@ -223,7 +223,7 @@ _Phase 6._
 _Phase 7._
 
 ## Keycloak
-_Phase 8._
+_Retiré du périmètre (2026-11-16) : voir THEORIE Q19._
 
 ## Angular
 _Phase 9._
