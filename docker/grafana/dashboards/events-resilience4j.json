@@ -362,7 +362,7 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "RateLimiter : autorisations disponibles (5 / s)",
+      "title": "Appels Feign : durée moyenne par client",
       "description": "",
       "datasource": {
         "type": "prometheus",
@@ -370,6 +370,40 @@
       },
       "gridPos": {
         "x": 0,
+        "y": 29,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {},
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum by (application, clientName) (rate(feign_client_requests_seconds_sum[1m])) / sum by (application, clientName) (rate(feign_client_requests_seconds_count[1m]))",
+          "legendFormat": "{{application}} → {{clientName}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "RateLimiter : autorisations disponibles (5 / s)",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
         "y": 29,
         "w": 12,
         "h": 8

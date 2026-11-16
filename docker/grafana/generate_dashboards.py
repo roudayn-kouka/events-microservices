@@ -95,6 +95,9 @@ r4j.ajouter("timeseries", "Retry : appels par résultat",
             [("sum by (name, kind) (rate(resilience4j_retry_calls_total[1m]))", "{{name}} {{kind}}")], unite="reqps")
 r4j.ajouter("timeseries", "TimeLimiter : appels par résultat",
             [("sum by (name, kind) (rate(resilience4j_timelimiter_calls_total[1m]))", "{{name}} {{kind}}")], unite="reqps")
+r4j.ajouter("timeseries", "Appels Feign : durée moyenne par client",
+            [("sum by (application, clientName) (rate(feign_client_requests_seconds_sum[1m])) / sum by (application, clientName) (rate(feign_client_requests_seconds_count[1m]))",
+              "{{application}} → {{clientName}}")], unite="s")
 r4j.ajouter("timeseries", "RateLimiter : autorisations disponibles (5 / s)",
             [("min by (application, name) (resilience4j_ratelimiter_available_permissions)", "{{application}} → {{name}}")])
 
