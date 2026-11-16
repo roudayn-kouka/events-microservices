@@ -15,7 +15,7 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 9 | MySQL | Une base et un utilisateur par service (script d'initialisation), isolation prouvée par `ERROR 1044`, port 3307. Commandes S1 à S3 | C13 |
 | 9 bis | Docker Compose du socle | Healthchecks, `depends_on: service_healthy`, `.env` généré, `make up` / `make health`, redémarrage tolérant (fail-fast + retry). Commandes D1 à D6 et C6 | C5, C6, C14 |
 | 10 | Services et Feign | Relations JPA remplacées par des ID et des appels Feign | _phase 2_ |
-| 11 | **CQRS Axon (mon module)** | Agrégat, commandes, projections dans statistics-service, replay | _phase 3_ |
+| 11 | **CQRS Axon (mon module)** | Agrégat, commandes, projections dans statistics-service, replay, comparaison AVANT / APRÈS | C44 à C52 |
 | 12 | Résilience4j | Configuration, fallbacks, 5 pannes | _phase 4_ |
 | 13 | LoadBalancer | Répartition prouvée | _phase 5_ |
 | 14 | Observabilité | Prometheus, Grafana (circuit breaker), Zipkin | _phase 6_ |
@@ -260,7 +260,7 @@ RemoteCall.call("participant-service", "Participant not found",
 boolean associated = event.participantIds() != null && event.participantIds().contains(participantId);
 ```
 
-### ⭐ statistics-service — mon module (port 8105) — VERSION AVANT CQRS
+### ⭐ statistics-service — mon module (port 8105) — VERSION AVANT CQRS (phase 2 ; version actuelle : section CQRS ci-dessous)
 
 - **Branche d'origine** : `feature/event-statistics` (Roudayna Kouka), plus la note moyenne des avis ajoutée sur `feature/feedback`.
 - **Ce qui ne change pas** : toutes les règles de calcul de mon module :
@@ -318,3 +318,76 @@ for (Logistics l : logistics) { if (l.isReserve()) { nbReservees++; cout += l.ge
 List<LogisticsDTO> reservees = logistics.stream().filter(LogisticsDTO::reserve).toList();
 float cout = coutReserve(reservees);                           // somme prixUnit × quantite
 ```
+
+## ⭐ CQRS Axon (phase 3) — slide 11 et annexes
+
+**Principe** : on sépare le modèle qui **écrit** (des commandes vérifiées par un agrégat, stockées comme une suite d'événements) du modèle qui **lit** (des vues locales, construites à partir de ces événements). Axon Server transporte les commandes, les événements et les requêtes, et il conserve l'event store.
+
+| Côté | Où | Ce qui est fait |
+|---|---|---|
+| Commandes | event-service | `EventAggregate` en **event sourcing** : 6 commandes, 6 événements ; règles (dates, aucune commande après suppression, idempotence) ; état reconstruit en rejouant ses événements |
+| Lecture locale | event-service | table `event` de `db_event`, tenue à jour par `EventProjection` (mode *subscribing* : à jour quand la commande rend la main) ; API et vérifications Feign inchangées |
+| Publication | participant, logistics, feedback | `EventGateway.publish` après chaque écriture, dans la transaction (si Axon Server refuse, l'écriture est annulée) |
+| **Requêtes (mon module)** | statistics-service | `StatistiquesProjection` (14 `@EventHandler`, processeur *tracking*, jeton dans `db_stats`) → 4 tables → `ProjectionStatsSource` → **le même calcul** → `@QueryHandler` interrogés par `QueryGateway` ; replay |
+| Contrat | module `events-api` | les événements uniquement (records Java sans dépendance) ; commandes et requêtes restent internes |
+
+**Comparaison mesurée sur les mêmes données** (captures C40 et C41 pour l'avant, C50 et C51 pour l'après) :
+
+| Point comparé | AVANT CQRS (`stats.source=feign`) | APRÈS CQRS (défaut) |
+|---|---|---|
+| Source (`X-Stats-Source`) | `feign-avant-cqrs` : 4 appels Feign par requête | `projections-cqrs` : 0 appel réseau |
+| Latence de `/api/stats/summary` | 38 à 47 ms | 19 à 21 ms |
+| feedback-service arrêté | **503** | **200** (dernières valeurs projetées) |
+| event, participant, logistics et feedback arrêtés | 503 | **200** |
+| Fraîcheur | immédiate | cohérence à terme : participant visible après 51 ms |
+| Reconstruction | — | replay : résumé identique avant et après |
+| Code du calcul `EventStatsServiceImpl` | inchangé | inchangé : seule la `StatsSource` change |
+
+**Avant / après : une écriture d'event-service.**
+
+```java
+// AVANT (phase 2) : l'état est écrit directement dans la table event
+participantIds(event).add(idParticipant);
+return eventRepository.save(event);
+
+// APRÈS (phase 3) : une commande, vérifiée par l'agrégat, qui publie un événement ;
+// la table event (modèle de lecture) est mise à jour par la projection
+envoyer(new AffecterParticipant(idEvent, idParticipant));
+return lire(idEvent);
+```
+
+**Avant / après : l'agrégat applique la règle, la projection construit la vue.**
+
+```java
+// Agrégat (côté commandes) : idempotent, aucun événement si le participant est déjà inscrit
+@CommandHandler
+public void handle(AffecterParticipant commande) {
+    actif();
+    if (!participantIds.contains(commande.idPart())) {
+        apply(new ParticipantAffecte(idEvent, commande.idPart()));
+    }
+}
+
+// Projection de mon module (côté requêtes) : la même information, dans db_stats
+@EventHandler
+public void on(ParticipantAffecte e) {
+    modifier(e.idEvent(), s -> s.getParticipantIds().add(e.idPart()));
+}
+```
+
+**Avant / après : la source des statistiques (mon module).**
+
+```java
+// AVANT : FeignStatsSource — event, participant, logistics et feedback lus à chaque requête
+@ConditionalOnProperty(name = "stats.source", havingValue = "feign")
+public class FeignStatsSource implements StatsSource { … }
+
+// APRÈS : ProjectionStatsSource — tables locales de db_stats, source par défaut
+@ConditionalOnProperty(name = "stats.source", havingValue = "projections", matchIfMissing = true)
+public class ProjectionStatsSource implements StatsSource { … }
+```
+
+**Trois défauts trouvés en réel et corrigés** (bons sujets d'oral, voir THEORIE Q18) :
+- une `List` renvoyée par un `@QueryHandler` perdait le type de ses éléments en traversant Axon Server : elle est enveloppée dans `ListeStats` ;
+- un agrégat absent arrivait « sans détails » chez l'appelant (409) : les erreurs sont emballées avec leur code (404) ;
+- un événement sans agrégat bloquait tout `calculCout` : le calcul est isolé par événement.

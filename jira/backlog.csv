@@ -41,14 +41,14 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 40,5,Story,Feign depuis feedback-service,"Vérifie l'événement (existence, inscription, date de fin) et le participant",Highest,feign,2,Done
 41,39,Task,calculCout via Feign,Recalcul planifié du coût des événements par appel à logistics-service,High,feign,2,Done
 42,4,Task,Script de données de démonstration,scripts/seed-demo.sh : jeu de données créé par les API via la Gateway,Medium,services,1,Done
-43,8,Story,Axon Server en conteneur,Event store et bus de messages ; interface sur 8024,Highest,axon,1,To Do
-44,8,Story,EventAggregate,"Commandes Create, Update, Delete, AffecterParticipant, AffecterLogistique ; @CommandHandler et @EventSourcingHandler",Highest,axon;cqrs,5,To Do
-45,44,Task,Tests AggregateTestFixture,Given/When/Then pour chaque commande de l'agrégat,High,axon;tests,2,To Do
-46,8,Story,Publication des événements métier,"participant, logistics et feedback publient sur Axon (EventGateway)",High,axon,2,To Do
-47,8,Story,Projections statistics-service,@EventHandler alimentant db_stats ; token store JPA dans MySQL (mon module),Highest,axon;cqrs;statistics,5,To Do
-48,8,Story,Requêtes statistiques,@QueryHandler via QueryGateway ; API de requêtes séparée de l'API de commandes,Highest,axon;cqrs;statistics,3,To Do
-49,47,Task,Note moyenne des feedbacks,Moyenne et nombre d'avis par événement et au global,High,statistics,1,To Do
-50,8,Story,Replay de la projection,Reset du token et reconstruction de db_stats depuis l'event store,High,axon;statistics,2,To Do
+43,8,Story,Axon Server en conteneur,Event store et bus de messages ; interface sur 8024,Highest,axon,1,Done
+44,8,Story,EventAggregate,"Commandes Create, Update, Delete, AffecterParticipant, AffecterLogistique ; @CommandHandler et @EventSourcingHandler",Highest,axon;cqrs,5,Done
+45,44,Task,Tests AggregateTestFixture,Given/When/Then pour chaque commande de l'agrégat,High,axon;tests,2,Done
+46,8,Story,Publication des événements métier,"participant, logistics et feedback publient sur Axon (EventGateway)",High,axon,2,Done
+47,8,Story,Projections statistics-service,@EventHandler alimentant db_stats ; token store JPA dans MySQL (mon module),Highest,axon;cqrs;statistics,5,Done
+48,8,Story,Requêtes statistiques,@QueryHandler via QueryGateway ; API de requêtes séparée de l'API de commandes,Highest,axon;cqrs;statistics,3,Done
+49,47,Task,Note moyenne des feedbacks,Moyenne et nombre d'avis par événement et au global,High,statistics,1,Done
+50,8,Story,Replay de la projection,Reset du token et reconstruction de db_stats depuis l'event store,High,axon;statistics,2,Done
 51,6,Story,Configuration Resilience4j,"Retry 3 x 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s dans config-repo",Highest,resilience4j,3,To Do
 52,51,Task,Fallbacks explicites,"Une méthode fallback par appel Feign ; 503 clair en écriture, réponse dégradée en lecture",Highest,resilience4j,2,To Do
 53,6,Task,Panne 1 : disponibilité,scripts/pannes/1-disponibilite.sh : docker stop d'un service appelé,High,pannes,1,To Do

@@ -14,6 +14,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 | 0 | Monorepo, POM parent, GitFlow, backlog JIRA, livrables | Terminée |
 | 1 | Socle : Config Server, Eureka, Gateway, MySQL, Docker Compose | Terminée |
 | 2 | Services métier + Feign (statistics en version AVANT CQRS), `make seed` | Terminée |
+| 3 | CQRS Axon : agrégat event-sourcé, publications, projections et requêtes de statistics-service, replay | Terminée |
 
 ## Prérequis
 
@@ -40,6 +41,7 @@ make down     # arrêt (données conservées)
 | API Gateway (point d'entrée des API) | http://localhost:8088/api/... |
 | Routes de la Gateway | http://localhost:8088/actuator/gateway/routes |
 | Eureka | http://localhost:8761 |
+| Axon Server (event store, commandes, requêtes) | http://localhost:8024 |
 | Config Server | http://localhost:8888/{service}/default |
 | MySQL | `localhost:3307` (une base et un utilisateur par service) |
 
@@ -52,11 +54,12 @@ events-microservices/
 ├── eureka-server/          Annuaire de services
 ├── api-gateway/            Point d'entrée : routes lb://, CORS
 ├── common/                 Erreurs JSON communes (ApiError), en-tête X-Instance-Id
+├── events-api/             Contrats des événements Axon (records, sans dépendance)
 ├── participant-service/    Participants (8102, db_participant)
 ├── logistics-service/      Logistique et coût réservé (8103, db_logistics)
 ├── event-service/          Événements, Feign, calculCout (8101, db_event)
 ├── feedback-service/       Avis sur les événements terminés, Feign (8104, db_feedback)
-├── statistics-service/     ⭐ Mon module : statistiques (8105), version AVANT CQRS via Feign
+├── statistics-service/     ⭐ Mon module : côté requêtes CQRS (8105, db_stats), replay
 ├── config-repo/            Configuration de référence (un YAML par service)
 ├── config-overrides/       Surcharges à chaud des scénarios de panne (non versionnées)
 ├── docker/mysql/init/      Création des bases et utilisateurs par service

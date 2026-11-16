@@ -131,4 +131,36 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Ce que CQRS change à la phase 3** : statistics-service tient sa propre vue (`db_stats`), mise à jour par les événements publiés dans Axon. La lecture devient locale : 0 appel réseau, et elle répond même si les services d'écriture sont arrêtés. En contrepartie, la vue est **cohérente à terme** (un court délai après une écriture), et l'on peut la **reconstruire** par replay.
 - **Pourquoi le calcul ne change pas** : il dépend de l'interface `StatsSource`, pas de Feign. La bascule ne touche que la source : c'est le principe d'inversion des dépendances, et ce qui rend la comparaison honnête.
 
+## CQRS et Axon (phase 3)
+
+### Q15. Qu'est-ce que CQRS, et pourquoi l'appliquer ici ?
+
+- **Command Query Responsibility Segregation** : on sépare le modèle d'écriture (des commandes qui changent l'état, vérifiées par des règles) du modèle de lecture (des vues optimisées pour les requêtes). Chacun a sa base et peut évoluer, ou être dimensionné, indépendamment.
+- **Ici** : event-service écrit (agrégat) ; statistics-service lit (projections dans `db_stats`). Les statistiques croisent les 4 services : sans CQRS, il faut composer 4 appels réseau à chaque requête (version AVANT, Q14).
+- **Gains mesurés** : latence divisée par deux (environ 40 → 20 ms), aucune dépendance de disponibilité (200 avec les 4 services d'écriture arrêtés), aucune charge de lecture sur leurs bases.
+- **Coûts** : cohérence à terme (Q17), plus de pièces (Axon Server, projections, jetons), et un contrat d'événements à faire évoluer avec soin (versionnement, *upcasters*).
+- **Ce qu'on n'a pas fait** : CQRS sur participant, logistique et feedback. Ce sont des CRUD simples qui *publient* des événements, sans event sourcing. On l'applique là où il apporte quelque chose.
+
+### Q16. Event sourcing : comment l'agrégat retrouve-t-il son état ? Et le replay ?
+
+- **Event sourcing** : l'état de l'agrégat n'est stocké nulle part. Pour traiter une commande, Axon relit ses événements (`EventCreated`, `ParticipantAffecte`…) et les applique dans l'ordre (`@EventSourcingHandler`). L'historique complet est donc conservé et consultable (C45).
+- **Le `@CommandHandler` décide, l'`@EventSourcingHandler` applique** : la règle est vérifiée avant `apply`, et l'état ne change qu'en réaction à l'événement. C'est ce qui permet de rejouer l'historique sans revérifier les règles.
+- **Idempotence** : réinscrire un participant ou recalculer un coût identique ne produit aucun événement. Sans cela, `calculCout`, qui tourne chaque minute, ajouterait un événement par minute et par événement dans l'event store.
+- **Replay de la projection** : on remet à zéro le jeton du processeur « statistiques ». Le `@ResetHandler` vide les tables, puis tout l'event store est relu. Les handlers étant des *upserts*, le résultat est identique (C52). On s'en sert après avoir corrigé une projection, ou pour en créer une nouvelle à partir de l'historique.
+- **Pourquoi un indicateur `supprime` plutôt que `markDeleted()`** : avec `markDeleted`, Axon refuse de charger l'agrégat *avant* le handler. L'appelant reçoit alors une erreur sans code ; avec l'indicateur, la règle renvoie un 404 explicite.
+
+### Q17. Cohérence à terme, double écriture : quels risques, quelles parades ?
+
+- **Cohérence à terme** : la projection *tracking* lit le flux à son rythme. Une écriture apparaît dans les statistiques après un court délai, 51 ms mesurés (C49). Pour un tableau de bord, c'est acceptable ; pour un solde bancaire, on lirait le modèle d'écriture.
+- **Lecture de ses propres écritures dans event-service** : sa projection locale est en mode *subscribing*, traitée dans l'unité de travail de la commande. `GET /events/{id}` est donc à jour dès la réponse au `POST`.
+- **Double écriture** (participant, logistique, feedback) : écrire en base **et** publier un événement, ce sont deux systèmes. Ici, la publication a lieu dans la transaction, avant le commit : si Axon Server la refuse, l'écriture est annulée. Il reste le cas rare d'un événement publié puis d'un commit qui échoue. En production, on utiliserait le pattern **outbox** : l'événement est écrit dans une table de la même base et de la même transaction, puis publié par un processus séparé.
+- **Plusieurs instances de statistics-service (phase 5)** : le jeton est partagé dans `db_stats`. Un seul processeur réclame chaque segment, donc un événement n'est pas projeté deux fois, mais toutes les instances servent les requêtes.
+
+### Q18. Quels pièges de sérialisation avez-vous rencontrés avec Axon Server ?
+
+- **XStream, le défaut d'Axon 4**, ne sait pas écrire un record ni `Set.copyOf` (« No converter available »), et il est déprécié. Tous les messages utilisent donc **Jackson**, avec l'ObjectMapper de Spring : les dates sont en ISO.
+- **Une `List` renvoyée par un `@QueryHandler`** traverse Axon Server en JSON **sans le type de ses éléments**. Elle revient en liste de `LinkedHashMap`, d'où une erreur 500 constatée en réel. Les tests passaient par le bus local, qui ne sérialise rien. Correction : une enveloppe `ListeStats(List<EventStatsDTO>)`, plus un test avec le vrai `JacksonSerializer` (`QuerySerialisationTest`).
+- **Les exceptions** ne traversent pas le réseau avec leur classe : seuls le message et les **détails** voyagent. Les règles métier sont donc emballées dans une `CommandExecutionException` ou une `QueryExecutionException`, avec `{status, message}`, puis retraduites en HTTP.
+- **Les requêtes sans paramètre** (records vides) demandent `spring.jackson.serialization.fail-on-empty-beans: false`.
+
 _Les questions suivantes sont ajoutées au fil des phases : CQRS vs CRUD, event sourcing, états du circuit breaker, Gateway vs LoadBalancer, tracing, Terraform…_

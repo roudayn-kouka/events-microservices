@@ -190,7 +190,7 @@ SERVICES = [
         ],
     },
     {
-        "nom": "statistics-service (mon module) — AVANT CQRS",
+        "nom": "statistics-service (mon module) — CQRS, côté requêtes",
         "origine": "feature/event-statistics (Roudayna Kouka) + note moyenne de feature/feedback",
         "correspondance": [
             ("GET /events/event-stats", "GET /api/stats/events"),
@@ -198,12 +198,13 @@ SERVICES = [
             ("GET /events/event-stats/summary", "GET /api/stats/summary"),
             ("GET /events/event-stats/upcoming", "GET /api/stats/upcoming"),
             ("GET /events/event-stats/between/{d1}/{d2}", "GET /api/stats/between/{d1}/{d2}"),
-            ("(nouveau)", "en-tête X-Stats-Source : feign-avant-cqrs (phase 2) / projections (phase 3)"),
+            ("(nouveau)", "en-tête X-Stats-Source : projections-cqrs (phase 3) ; feign-avant-cqrs si stats.source=feign"),
+            ("(nouveau, CQRS)", "GET /api/stats/admin/projection, POST /api/stats/admin/replay"),
         ],
         "requetes": [
-            ("Résumé global (4 services lus par Feign)", "GET", "/api/stats/summary", None, 200,
-             "pm.test('Version AVANT CQRS', () => pm.expect(pm.response.headers.get('X-Stats-Source'))"
-             ".to.eql('feign-avant-cqrs'));"),
+            ("Résumé global (projections db_stats, QueryGateway)", "GET", "/api/stats/summary", None, 200,
+             "pm.test('Version APRÈS CQRS', () => pm.expect(pm.response.headers.get('X-Stats-Source'))"
+             ".to.eql('projections-cqrs'));"),
             ("Statistiques de tous les événements", "GET", "/api/stats/events", None, 200, None),
             ("Statistiques d'un événement", "GET", "/api/stats/events/{{eventId}}", None, 200,
              "pm.test('Coût réservé = 250, 2 participants', () => {\n"
@@ -219,6 +220,10 @@ SERVICES = [
             ("Erreur 400 : date invalide", "GET", "/api/stats/between/2026-13-01/2026-12-31", None, 400, None),
             ("Erreur 404 : événement inconnu", "GET", "/api/stats/events/00000000-0000-0000-0000-000000000000",
              None, 404, None),
+            ("État de la projection CQRS", "GET", "/api/stats/admin/projection", None, 200,
+             "pm.test('Processeur statistiques actif', () => pm.expect(pm.response.json().enCours).to.be.true);"),
+            ("Replay : reconstruire db_stats depuis l'event store", "POST", "/api/stats/admin/replay", None, 202,
+             "pm.test('Processeur rejoué', () => pm.expect(pm.response.json().processeur).to.eql('statistiques'));"),
         ],
     },
 ]
