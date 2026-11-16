@@ -1894,11 +1894,11 @@
       ]
     },
     {
-      "name": "statistics-service (mon module) — AVANT CQRS",
-      "description": "**statistics-service (mon module) — AVANT CQRS** — repris de `feature/event-statistics (Roudayna Kouka) + note moyenne de feature/feedback`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `GET /events/event-stats` | `GET /api/stats/events` |\n| `GET /events/event-stats/{id}` | `GET /api/stats/events/{id} (UUID)` |\n| `GET /events/event-stats/summary` | `GET /api/stats/summary` |\n| `GET /events/event-stats/upcoming` | `GET /api/stats/upcoming` |\n| `GET /events/event-stats/between/{d1}/{d2}` | `GET /api/stats/between/{d1}/{d2}` |\n| `(nouveau)` | `en-tête X-Stats-Source : feign-avant-cqrs (phase 2) / projections (phase 6)` |",
+      "name": "statistics-service (mon module) — CQRS, côté requêtes",
+      "description": "**statistics-service (mon module) — CQRS, côté requêtes** — repris de `feature/event-statistics (Roudayna Kouka) + note moyenne de feature/feedback`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `GET /events/event-stats` | `GET /api/stats/events` |\n| `GET /events/event-stats/{id}` | `GET /api/stats/events/{id} (UUID)` |\n| `GET /events/event-stats/summary` | `GET /api/stats/summary` |\n| `GET /events/event-stats/upcoming` | `GET /api/stats/upcoming` |\n| `GET /events/event-stats/between/{d1}/{d2}` | `GET /api/stats/between/{d1}/{d2}` |\n| `(nouveau)` | `en-tête X-Stats-Source : projections-cqrs (phase 3) ; feign-avant-cqrs si stats.source=feign` |\n| `(nouveau, CQRS)` | `GET /api/stats/admin/projection, POST /api/stats/admin/replay` |",
       "item": [
         {
-          "name": "Résumé global (4 services lus par Feign)",
+          "name": "Résumé global (projections db_stats, QueryGateway)",
           "event": [
             {
               "listen": "test",
@@ -1907,7 +1907,7 @@
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
                   "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
-                  "pm.test('Version AVANT CQRS', () => pm.expect(pm.response.headers.get('X-Stats-Source')).to.eql('feign-avant-cqrs'));"
+                  "pm.test('Version APRÈS CQRS', () => pm.expect(pm.response.headers.get('X-Stats-Source')).to.eql('projections-cqrs'));"
                 ]
               }
             }
@@ -2173,6 +2173,70 @@
                 "stats",
                 "events",
                 "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          }
+        },
+        {
+          "name": "État de la projection CQRS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Processeur statistiques actif', () => pm.expect(pm.response.json().enCours).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/admin/projection",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "admin",
+                "projection"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Replay : reconstruire db_stats depuis l'event store",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202', () => pm.response.to.have.status(202));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Processeur rejoué', () => pm.expect(pm.response.json().processeur).to.eql('statistiques'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/admin/replay",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "admin",
+                "replay"
               ]
             }
           }

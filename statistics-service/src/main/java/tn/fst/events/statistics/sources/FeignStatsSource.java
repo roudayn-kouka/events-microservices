@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,15 +24,17 @@ import tn.fst.events.statistics.clients.RemoteCall;
 /**
  * ===== VERSION AVANT CQRS =====
  * Les statistiques sont recalculées à chaque requête à partir des quatre services métier, lus par
- * OpenFeign. Conséquences, mesurées et comparées à la phase 6 (captures C40 et C41) :
+ * OpenFeign. Conséquences, mesurées et comparées à la phase 3 (captures C40 et C41) :
  * <ul>
  *   <li>4 appels réseau par requête (lots d'ID : le nombre d'appels ne dépend pas du nombre d'événements) ;</li>
  *   <li>une panne de n'importe lequel des quatre services rend les statistiques indisponibles (503) ;</li>
  *   <li>la charge de lecture des statistiques retombe sur les bases des services d'écriture.</li>
  * </ul>
- * À la phase 6, cette classe est remplacée par une source qui lit les projections de db_stats.
+ * Phase 3 : ProjectionStatsSource (projections de db_stats) est la source par défaut ; cette classe
+ * n'est créée qu'avec stats.source=feign, pour comparer AVANT / APRÈS CQRS en démonstration.
  */
 @Component
+@ConditionalOnProperty(name = "stats.source", havingValue = "feign")
 @RequiredArgsConstructor
 public class FeignStatsSource implements StatsSource {
 

@@ -48,6 +48,15 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
+        <!-- CQRS (phase 3) : agrégat event-sourcé, CommandGateway, projection locale -->
+        <dependency>
+            <groupId>tn.fst.events</groupId>
+            <artifactId>events-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.axonframework</groupId>
+            <artifactId>axon-spring-boot-starter</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.retry</groupId>
             <artifactId>spring-retry</artifactId>
@@ -68,6 +77,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- AggregateTestFixture : tests Given / When / Then de l'agrégat -->
+        <dependency>
+            <groupId>org.axonframework</groupId>
+            <artifactId>axon-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

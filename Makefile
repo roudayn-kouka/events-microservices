@@ -23,9 +23,9 @@ up: env ## Construit les images et démarre la stack (attend que tout soit « he
 	@if ! git diff --quiet HEAD -- config-repo; then echo "Attention : config-repo/ a des modifications non commitées, le Config Server ne les verra pas."; fi
 	CONFIG_GIT_LABEL=$(BRANCHE) $(COMPOSE) $(PROFILES) up -d --build --wait
 
-restart: ## Recrée un service en gardant la branche Git courante : make restart S=logistics-service
+restart: ## Reconstruit et recrée un service, branche Git courante gardée : make restart S=logistics-service
 	@test -n "$(S)" || { echo "Préciser le service : make restart S=<service>"; exit 1; }
-	CONFIG_GIT_LABEL=$(BRANCHE) $(COMPOSE) $(PROFILES) up -d --force-recreate --wait $(S)
+	CONFIG_GIT_LABEL=$(BRANCHE) $(COMPOSE) $(PROFILES) up -d --build --force-recreate --no-deps --wait $(S)
 
 down: ## Arrête la stack (les volumes de données sont conservés)
 	$(COMPOSE) --profile '*' down

@@ -133,3 +133,15 @@ Unité : un test `@Test` d'une version distincte de classe, comme l'inventaire i
 - 2 tests de `DemoDataLoader` : un chargeur qui écrit dans 3 bases est impossible ; il est remplacé par `scripts/seed-demo.sh` (EVT-42) ;
 - 5 tests des DTO d'écriture du monolithe dans feedback (`RequestDtoMappingTest`) : ils sont remplacés par les `MapperTest` des services propriétaires.
 
+## Phase 3 — CQRS Axon : tests
+
+| Module | Avant la phase 3 | Après | Ajoutés | Adaptés (même scénario, nouvelle vérification) |
+|---|---:|---:|---:|---|
+| events-api (nouveau) | — | 14 | 14 | — (contrat JSON de chaque événement) |
+| event-service | 65 | 88 | 23 : 16 `AggregateTestFixture`, 3 d'intégration CQRS (event store JPA sur H2), 3 de traduction d'erreurs, 1 de `calculCout` isolé | 33 tests de service : « l'événement est sauvegardé » devient « la commande est envoyée » (CommandGateway simulée) ; aucun supprimé |
+| participant-service | 41 | 44 | 3 (publication) | aucun : seuls un `EventGateway` simulé et un Axon local en test sont ajoutés |
+| logistics-service | 29 | 31 | 2 (publication) | aucun |
+| feedback-service | 62 | 65 | 3 (publication, et rien publié si l'avis est refusé) | aucun (construction du service avec le paramètre `EventGateway`) |
+| statistics-service ⭐ | 45 | 63 | 18 : projection (5), source projections (3), traduction des erreurs de requête (5), intégration CQRS de bout en bout avec replay (1), sérialisation réelle Axon (3), arrondi (1) | 4 tests d'intégration fixés sur `stats.source=feign` (ils traversent désormais aussi le bus de requêtes) |
+
+Tous modules confondus : **318 tests verts** (`mvn verify`) ; Newman : 64 requêtes, 122 assertions, 0 échec ; `make health` entièrement vert ; couverture JaCoCo de statistics-service : **97 %**.

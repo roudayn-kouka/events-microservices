@@ -34,8 +34,10 @@ import tn.fst.events.statistics.dto.Tache;
  * données viennent des quatre clients Feign, remplacés par des « services distants » en mémoire
  * (@MockitoBean). Le calcul et la source réelle (FeignStatsSource) sont donc testés ensemble ;
  * les tests gardent leurs scénarios (événement, à venir, intervalle, global avant / après).
+ * Phase 3 : source fixée à « feign » (version AVANT CQRS) ; IEventStatsService est désormais
+ * StatsQueryGateway : chaque appel traverse aussi le bus de requêtes Axon (@QueryHandler).
  */
-@SpringBootTest
+@SpringBootTest(properties = "stats.source=feign")
 class EventStatsServiceImplIntegrationTest {
 
     @Autowired IEventStatsService eventStatsService;

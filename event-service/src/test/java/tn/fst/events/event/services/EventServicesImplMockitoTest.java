@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -28,17 +29,19 @@ import tn.fst.events.event.clients.LogisticsClient;
 import tn.fst.events.event.clients.LogisticsDTO;
 import tn.fst.events.event.clients.ParticipantClient;
 import tn.fst.events.event.clients.ParticipantDTO;
+import tn.fst.events.event.commands.EventCommands.AffecterLogistique;
+import tn.fst.events.event.commands.EventCommands.AffecterParticipant;
+import tn.fst.events.event.commands.EventCommands.CreateEvent;
+import tn.fst.events.event.commands.EventCommands.UpdateEventCost;
 import tn.fst.events.event.dto.EventDetailsDTO;
 import tn.fst.events.event.entities.Event;
 import tn.fst.events.event.repositories.EventRepository;
 
 /**
- * Repris de feature/feedback (10 tests AVEC Mockito), tous adaptés :
- * - « participant introuvable » : le repository vide devient un 404 renvoyé par Feign ;
- * - les ensembles d'événements du participant deviennent l'ensemble participantIds de l'événement ;
- * - getStatus() (Boot 2) devient getStatusCode() (Boot 3) ;
- * - addAffectLog sauvegarde toujours l'événement (les ID de logistique sont dans db_event).
- * 7 tests ajoutés : affecterParticipant, affecterLogistique, details, panne d'un service (503).
+ * Repris de feature/feedback (10 tests AVEC Mockito), tous adaptés en phase 2 (404 renvoyé par
+ * Feign, participantIds, getStatusCode()). 7 tests ajoutés en phase 2.
+ * Phase 3 (CQRS) : CommandGateway simulée ; « l'événement est sauvegardé » devient « la commande
+ * est envoyée » ; « jamais sauvegardé » devient « aucune commande envoyée ».
  */
 @ExtendWith(MockitoExtension.class)
 class EventServicesImplMockitoTest {
@@ -52,15 +55,22 @@ class EventServicesImplMockitoTest {
     @Mock
     private LogisticsClient logisticsClient;
 
+    @Mock
+    private CommandGateway commandGateway;
+
     @InjectMocks
     private EventServicesImpl service;
 
-    private static Event event() {
+    private static Event event(String id) {
         Event e = new Event();
-        e.setIdEvent("e-1");
+        e.setIdEvent(id);
         e.setParticipantIds(null);
         e.setLogisticsIds(null);
         return e;
+    }
+
+    private static Event event() {
+        return event("e-1");
     }
 
     private static ParticipantDTO participant(int id) {
@@ -75,12 +85,12 @@ class EventServicesImplMockitoTest {
     void associatesParticipantWhenEventsCollectionIsNull() {
         Event event = event();
         when(participantClient.getParticipant(3)).thenReturn(participant(3));
-        when(eventRepository.save(event)).thenReturn(event);
+        when(eventRepository.findById("e-1")).thenReturn(Optional.of(event));
 
         assertSame(event, service.addAffectEvenParticipant(event, 3));
 
         assertEquals(Set.of(3), event.getParticipantIds());
-        verify(eventRepository).save(event);
+        verify(commandGateway).sendAndWait(new CreateEvent("e-1", null, null, null, Set.of(3)));
     }
 
     @Test
@@ -88,7 +98,7 @@ class EventServicesImplMockitoTest {
         Event added = event();
         added.setParticipantIds(new HashSet<>(Set.of(1)));
         when(participantClient.getParticipant(3)).thenReturn(participant(3));
-        when(eventRepository.save(added)).thenReturn(added);
+        when(eventRepository.findById("e-1")).thenReturn(Optional.of(added));
 
         service.addAffectEvenParticipant(added, 3);
 
@@ -105,7 +115,7 @@ class EventServicesImplMockitoTest {
 
         assertEquals(HttpStatus.NOT_FOUND, error.getStatusCode());
         assertEquals("Participant not found with id 3", error.getReason());
-        verify(eventRepository, never()).save(any(Event.class));
+        verify(commandGateway, never()).sendAndWait(any());
     }
 
     @Test
@@ -115,7 +125,7 @@ class EventServicesImplMockitoTest {
                 () -> service.addAffectEvenParticipant(event));
 
         assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
-        verifyNoInteractions(participantClient, eventRepository);
+        verifyNoInteractions(participantClient, eventRepository, commandGateway);
     }
 
     @Test
@@ -123,7 +133,7 @@ class EventServicesImplMockitoTest {
         Event event = event();
         event.setParticipantIds(new HashSet<>(Set.of(1, 2)));
         when(participantClient.getParticipants(Set.of(1, 2))).thenReturn(List.of(participant(1), participant(2)));
-        when(eventRepository.save(event)).thenReturn(event);
+        when(eventRepository.findById("e-1")).thenReturn(Optional.of(event));
 
         assertSame(event, service.addAffectEvenParticipant(event));
 
@@ -141,25 +151,23 @@ class EventServicesImplMockitoTest {
 
         assertEquals(HttpStatus.NOT_FOUND, error.getStatusCode());
         assertEquals("Participant not found with id [42]", error.getReason());
-        verify(eventRepository, never()).save(any(Event.class));
+        verify(commandGateway, never()).sendAndWait(any());
     }
 
     @Test
-    void addsLogisticsAndSavesEventWhenCollectionIsNull() {
+    void addsLogisticsAndSendsAffecterLogistiqueWhenCollectionIsNull() {
         LogisticsDTO logistics = logistics(0, true, 1f, 1);
         LogisticsDTO creee = logistics(9, true, 1f, 1);
-        Event event = event();
-        when(eventRepository.findFirstByDescription("Conference")).thenReturn(Optional.of(event));
+        when(eventRepository.findFirstByDescription("Conference")).thenReturn(Optional.of(event()));
         when(logisticsClient.addLogistics(logistics)).thenReturn(creee);
 
         assertSame(creee, service.addAffectLog(logistics, "Conference"));
 
-        assertEquals(Set.of(9), event.getLogisticsIds());
-        verify(eventRepository).save(event);
+        verify(commandGateway).sendAndWait(new AffecterLogistique("e-1", 9));
     }
 
     @Test
-    void addsLogisticsToExistingCollectionAndSavesEvent() {
+    void addsLogisticsToExistingCollectionAndSendsAffecterLogistique() {
         LogisticsDTO added = logistics(0, true, 1f, 1);
         Event event = event();
         event.setLogisticsIds(new HashSet<>(Set.of(4)));
@@ -168,8 +176,7 @@ class EventServicesImplMockitoTest {
 
         service.addAffectLog(added, "Conference");
 
-        assertEquals(Set.of(4, 9), event.getLogisticsIds());
-        verify(eventRepository).save(event);
+        verify(commandGateway).sendAndWait(new AffecterLogistique("e-1", 9));
     }
 
     @Test
@@ -192,24 +199,39 @@ class EventServicesImplMockitoTest {
 
     @Test
     void calculatesReservedCostsIndependentlyAndTreatsNullLogisticsAsEmpty() {
-        Event withoutLogistics = event();
-        Event withLogistics = event();
+        Event withoutLogistics = event("e-1");
+        Event withLogistics = event("e-2");
         withLogistics.setLogisticsIds(new HashSet<>(Set.of(1, 2)));
         when(participantClient.search("Tounsi", "Ahmed", "ORGANISATEUR")).thenReturn(List.of(participant(5)));
         when(eventRepository.findDistinctByParticipantIdsIn(Set.of(5)))
                 .thenReturn(List.of(withoutLogistics, withLogistics));
         when(logisticsClient.coutReserve(Set.of(1, 2))).thenReturn(50.0f); // 12,5 × 4 ; non réservé ignoré
-        when(eventRepository.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.calculCout();
 
         assertEquals(0.0f, withoutLogistics.getCout());
         assertEquals(50.0f, withLogistics.getCout());
-        verify(eventRepository).save(withoutLogistics);
-        verify(eventRepository).save(withLogistics);
+        verify(commandGateway).sendAndWait(new UpdateEventCost("e-1", 0f));
+        verify(commandGateway).sendAndWait(new UpdateEventCost("e-2", 50f));
     }
 
     // ---------------------------------------------------------------- ajoutés
+
+    @Test
+    void unEvenementRefuseParLAgregatNeBloquePasLeCalculDesAutres() {
+        Event perdu = event("perdu");
+        Event sain = event("sain");
+        when(participantClient.search("Tounsi", "Ahmed", "ORGANISATEUR")).thenReturn(List.of(participant(5)));
+        when(eventRepository.findDistinctByParticipantIdsIn(Set.of(5))).thenReturn(List.of(perdu, sain));
+        when(commandGateway.sendAndWait(new UpdateEventCost("perdu", 0f))).thenThrow(
+                new org.axonframework.commandhandling.CommandExecutionException("absent", null,
+                        new tn.fst.events.event.commands.ErreurCommande(404, "Event not found with id perdu")));
+
+        List<Event> calcules = service.calculCout();
+
+        assertEquals(List.of(sain), calcules);
+        verify(commandGateway).sendAndWait(new UpdateEventCost("sain", 0f));
+    }
 
     @Test
     void calculCoutSansOrganisateurNeTouchePasAuxEvenements() {
@@ -217,7 +239,7 @@ class EventServicesImplMockitoTest {
 
         assertTrue(service.calculCout().isEmpty());
 
-        verifyNoInteractions(eventRepository, logisticsClient);
+        verifyNoInteractions(eventRepository, logisticsClient, commandGateway);
     }
 
     @Test
@@ -227,19 +249,18 @@ class EventServicesImplMockitoTest {
 
         service.calculCoutPlanifie(); // journalise « reporté » et attend la prochaine minute
 
-        verifyNoInteractions(eventRepository);
+        verifyNoInteractions(eventRepository, commandGateway);
     }
 
     @Test
-    void affecterParticipantAjouteLIdALEvenementExistant() {
+    void affecterParticipantEnvoieLaCommandePuisRelitLEvenement() {
         Event event = event();
         when(eventRepository.findById("e-1")).thenReturn(Optional.of(event));
         when(participantClient.getParticipant(3)).thenReturn(participant(3));
-        when(eventRepository.save(event)).thenReturn(event);
 
         assertSame(event, service.affecterParticipant("e-1", 3));
 
-        assertEquals(Set.of(3), event.getParticipantIds());
+        verify(commandGateway).sendAndWait(new AffecterParticipant("e-1", 3));
     }
 
     @Test
@@ -250,11 +271,11 @@ class EventServicesImplMockitoTest {
                 () -> service.affecterParticipant("inconnu", 3));
 
         assertEquals(HttpStatus.NOT_FOUND, error.getStatusCode());
-        verifyNoInteractions(participantClient);
+        verifyNoInteractions(participantClient, commandGateway);
     }
 
     @Test
-    void affecterLogistiqueEnPanneRepond503SansModifierLEvenement() {
+    void affecterLogistiqueEnPanneRepond503SansCommande() {
         Event event = event();
         LogisticsDTO chaises = logistics(0, true, 2.5f, 100);
         when(eventRepository.findById("e-1")).thenReturn(Optional.of(event));
@@ -264,8 +285,7 @@ class EventServicesImplMockitoTest {
                 () -> service.affecterLogistique("e-1", chaises));
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, error.getStatusCode());
-        assertTrue(event.getLogisticsIds() == null || event.getLogisticsIds().isEmpty());
-        verify(eventRepository, never()).save(any(Event.class));
+        verify(commandGateway, never()).sendAndWait(any());
     }
 
     @Test

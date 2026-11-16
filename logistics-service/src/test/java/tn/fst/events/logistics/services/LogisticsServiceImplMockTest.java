@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import org.axonframework.eventhandling.gateway.EventGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,6 +31,9 @@ class LogisticsServiceImplMockTest {
 
     @Mock
     LogisticsRepository logisticsRepository;
+
+    @Mock
+    EventGateway eventGateway;
 
     @InjectMocks
     LogisticsServiceImpl logisticsService;
@@ -109,5 +113,39 @@ class LogisticsServiceImplMockTest {
     @Test
     void getLogisticsByIds_null_shouldReturnEmpty() {
         assertTrue(logisticsService.getLogisticsByIds(null).isEmpty());
+    }
+
+    // ---------------------------------------------------------------- ajoutés (phase 3, CQRS)
+
+    @Test
+    void creationEtModificationPublientLEtatComplet() {
+        Logistics l = new Logistics();
+        l.setDescription("Chaises");
+        l.setReserve(true);
+        l.setPrixUnit(2.5f);
+        l.setQuantite(100);
+        Logistics creee = new Logistics();
+        creee.setIdLog(9);
+        creee.setDescription("Chaises");
+        creee.setReserve(true);
+        creee.setPrixUnit(2.5f);
+        creee.setQuantite(100);
+        when(logisticsRepository.save(l)).thenReturn(creee);
+        when(logisticsRepository.save(creee)).thenReturn(creee);
+
+        logisticsService.addLogistics(l);
+        creee.setReserve(false);
+        logisticsService.updateLogistics(creee);
+
+        verify(eventGateway).publish(new tn.fst.events.api.logistics.LogisticsEvents.LogisticsCreated(9, "Chaises", true, 2.5f, 100));
+        verify(eventGateway).publish(new tn.fst.events.api.logistics.LogisticsEvents.LogisticsUpdated(9, "Chaises", false, 2.5f, 100));
+    }
+
+    @Test
+    void suppressionPublieLogisticsDeleted() {
+        logisticsService.deleteLogistics(9);
+
+        verify(logisticsRepository).deleteById(9);
+        verify(eventGateway).publish(new tn.fst.events.api.logistics.LogisticsEvents.LogisticsDeleted(9));
     }
 }

@@ -165,7 +165,7 @@ Variable utile : `S=http://localhost:8088/api/stats`. `$EV` est un événement n
 | # | Commande | Rôle | Résultat |
 |---|---|---|---|
 | N1 | `python3 postman/generate.py` | Régénérer la collection et les environnements (local, AWS) | `postman/*.json` |
-| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | les 5 services : 62 requêtes, 116 assertions, 0 échec |
+| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | les 5 services (CQRS compris) : 64 requêtes, 122 assertions, 0 échec |
 | N3 | Postman → *Import* → `postman/events-microservices.postman_collection.json` et `postman/local.postman_environment.json` | Utiliser la collection dans Postman | Un dossier par service, avec le tableau des correspondances d'endpoints |
 
 ## Feign
@@ -178,7 +178,23 @@ Variable utile : `S=http://localhost:8088/api/stats`. `$EV` est un événement n
 | F4 | Commande FB9 | Appel Feign de feedback-service vers event-service arrêté | `503` « event-service indisponible (pas de réponse) » |
 
 ## Axon (CQRS)
-_Phase 3._
+
+Variables utiles : `S=http://localhost:8088/api/stats`. `$EV` est l'UUID d'un événement.
+
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| A1 | `docker compose ps axon-server` puis `http://localhost:8024` | Axon Server (event store, bus) | `healthy` ; l'UI liste les applications connectées |
+| A2 | `curl -s 'localhost:8024/v1/components/event-service/commands?context=default' \| jq -c '[.[].command]'` | Commandes enregistrées par l'agrégat | 6 commandes `EventCommands$…` |
+| A3 | `curl -s -N --max-time 3 -H 'Accept: text/event-stream' "localhost:8024/v1/events?aggregateId=$EV&context=default" \| sed -n 's/^data://p' \| jq -c '{seq: .aggregateSequenceNumber, type: (.payload.type \| split("$")[1]), data: (.payload.data \| fromjson)}'` | Historique de l'agrégat (event sourcing) | `EventCreated` (0), `LogistiqueAffectee` (1), `EventCostUpdated` (2)… |
+| A4 | `curl -s -X DELETE localhost:8088/api/events/$EV; curl -s -X DELETE localhost:8088/api/events/$EV \| jq -c '{status,message}'` | Règle de l'agrégat transportée par Axon Server | `204`, puis `404` « Event not found with id … » |
+| A5 | `curl -s $S/admin/projection \| jq -c` | État de la projection de mon module | `enCours: true`, nombre de lignes de chaque table |
+| A6 | `curl -s -D - -o /dev/null $S/summary \| grep -i x-stats-source` puis `for i in 1 2 3 4 5; do curl -s -o /dev/null -w '%{time_total}\n' $S/summary; done` | Source et latence APRÈS CQRS | `projections-cqrs` ; environ 0,020 s |
+| A7 | `docker compose stop event-service participant-service logistics-service feedback-service; curl -s -o /dev/null -w '%{http_code}\n' $S/summary; docker compose --profile core start event-service participant-service logistics-service feedback-service` | Statistiques sans les services d'écriture | `200` (AVANT CQRS : 503) |
+| A8 | `curl -s -X POST localhost:8088/api/participants -H "Content-Type: application/json" -d '{"nom":"Cqrs","prenom":"Demo","tache":"SERVEUR"}' >/dev/null; for i in $(seq 20); do curl -s $S/summary \| jq .nbParticipants; done \| uniq` | Cohérence à terme | l'ancienne valeur, puis la nouvelle après quelques dizaines de ms |
+| A9 | `curl -s $S/summary \| jq -S -c . > avant.json; curl -s -X POST $S/admin/replay \| jq -c; sleep 3; curl -s $S/summary \| jq -S -c . \| diff - avant.json && echo identique` | Replay : `db_stats` reconstruite depuis l'event store | `202`, puis « identique » |
+| A10 | `printf 'stats:\n  source: feign\n' > config-overrides/statistics-service.yml; make restart S=statistics-service` puis A6 ; `rm config-overrides/statistics-service.yml; make restart S=statistics-service` | Bascule temporaire vers la version AVANT CQRS | `feign-avant-cqrs`, environ 0,040 s, puis retour à `projections-cqrs` |
+| A11 | `mvn -B -pl event-service -Dtest=EventAggregateTest test` | Tests Given / When / Then de l'agrégat | 16 tests verts |
+| A12 | `mvn -B -pl statistics-service -Dtest='StatsCqrsIntegrationTest,QuerySerialisationTest' test` | Chaîne CQRS de bout en bout et sérialisation réelle des réponses | verts |
 
 ## Resilience4j
 _Phase 4._

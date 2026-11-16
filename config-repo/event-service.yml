@@ -24,3 +24,11 @@ events:
   cout:
     # calculCout : toutes les 60 s comme dans le monolithe (cron Spring : s m h j M jS)
     cron: "0 * * * * *"
+
+# CQRS (phase 3) : la projection locale (table event = modèle de lecture) est traitée dans
+# l'unité de travail de la commande : à jour quand CommandGateway.sendAndWait rend la main.
+axon:
+  eventhandling:
+    processors:
+      event-lecture:
+        mode: subscribing

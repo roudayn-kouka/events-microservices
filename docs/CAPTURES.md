@@ -74,13 +74,25 @@ Pour chaque capture : ce qu'il faut ouvrir, et ce qui doit être visible.
 
 ### Comparaison AVANT / APRÈS CQRS (planifiée dès la phase 2)
 
-À la phase 6, les **mêmes commandes** (ST5, ST6, ST8) seront relancées. Les captures seront placées côte à côte sur une diapositive :
+Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (valeurs mesurées). À placer côte à côte sur une diapositive :
 
-| Point comparé | AVANT CQRS (phase 2) | APRÈS CQRS (phase 6) |
+| Point comparé | AVANT CQRS (phase 2) | APRÈS CQRS (phase 3) |
 |---|---|---|
-| Source (en-tête `X-Stats-Source`) | C40 : `feign-avant-cqrs` | C-CQRS-1 : projections `db_stats` |
-| Latence de `/api/stats/summary` | C40 : environ 40 ms, 4 appels réseau | C-CQRS-1 : lecture locale, 0 appel réseau |
-| feedback-service arrêté | C41 : `503` | C-CQRS-2 : `200`, dernières valeurs projetées |
+| Source (en-tête `X-Stats-Source`) | C40 : `feign-avant-cqrs` | C50 : `projections-cqrs` |
+| Latence de `/api/stats/summary` | C40 : 38 à 47 ms, 4 appels réseau | C50 : 19 à 21 ms, 0 appel réseau |
+| feedback-service arrêté | C41 : `503` | C51 : `200`, dernières valeurs projetées |
 | Code du calcul (`EventStatsServiceImpl`) | inchangé | inchangé (seule la `StatsSource` change) |
+
+### ⭐ CQRS Axon (phase 3)
+
+- [ ] **C44 — Axon Server** : `http://localhost:8024`. Visible : les 5 applications connectées, et les commandes d'event-service (A2).
+- [ ] **C45 — Event sourcing** : terminal, commande A3. Visible : l'historique numéroté d'un agrégat (`EventCreated`, `LogistiqueAffectee`, `EventCostUpdated`).
+- [ ] **C46 — Règle de l'agrégat** : terminal, commande A4. Visible : `204`, puis `404` sur la re-suppression, avec le message transporté par Axon Server.
+- [ ] **C47 — Tests de l'agrégat** : terminal, commande A11. Visible : les 16 tests Given / When / Then verts (IDE ou rapport Surefire).
+- [ ] **C48 — Projection de mon module** : terminal, commande A5, et `db_stats` dans MySQL (`SELECT * FROM token_entry`). Visible : processeur `statistiques` actif, tables remplies, jeton enregistré.
+- [ ] **C49 — Cohérence à terme** : terminal, commande A8. Visible : l'ancienne valeur, puis la nouvelle.
+- [ ] **C50 — APRÈS CQRS : source et latence** : terminal, commande A6. À placer à côté de C40.
+- [ ] **C51 — APRÈS CQRS : services d'écriture arrêtés** : terminal, commande A7 (et ST8). Visible : `200`. À placer à côté de C41.
+- [ ] **C52 — Replay** : terminal, commande A9. Visible : `202`, puis « identique ».
 
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._

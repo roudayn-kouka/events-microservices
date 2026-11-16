@@ -14,6 +14,7 @@ x-spring-service: &spring-service
   environment: &spring-env
     CONFIG_SERVER_URL: http://config-server:8888
     EUREKA_URL: http://eureka-server:8761/eureka
+    AXON_SERVER: axon-server:8124
     JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
 
 x-healthcheck: &healthcheck
@@ -45,6 +46,29 @@ services:
     healthcheck:
       <<: *healthcheck
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+
+  # ------------------------------------------------------------- Axon Server
+  # CQRS (phase 3) : event store et routage des commandes, événements et requêtes.
+  # Interface : http://localhost:8024 ; gRPC des services : 8124.
+  axon-server:
+    image: axoniq/axonserver:2025.2.13-nonroot
+    profiles: [core, lite]
+    restart: unless-stopped
+    mem_limit: 768m
+    environment:
+      AXONIQ_AXONSERVER_NAME: axon-server
+      AXONIQ_AXONSERVER_HOSTNAME: axon-server
+      # nœud unique, sans initialisation de cluster ; le mode dev permet de vider l'event store
+      AXONIQ_AXONSERVER_STANDALONE: "true"
+      AXONIQ_AXONSERVER_DEVMODE_ENABLED: "true"
+      JAVA_TOOL_OPTIONS: "-Xmx384m -XX:+UseSerialGC"
+    ports: ["8024:8024", "8124:8124"]
+    volumes:
+      - axon-data:/axonserver/data
+      - axon-events:/axonserver/events
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8024/actuator/health | grep -q '\"status\":\"UP\"'"]
 
   # ----------------------------------------------------------- Config Server
   config-server:
@@ -117,6 +141,7 @@ services:
     ports: ["8102:8102"]
     depends_on: &depends-socle
       mysql: { condition: service_healthy }
+      axon-server: { condition: service_healthy }
       config-server: { condition: service_healthy }
       eureka-server: { condition: service_healthy }
     healthcheck:
@@ -177,8 +202,8 @@ services:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8104/actuator/health | grep -q '\"status\":\"UP\"'"]
 
-  # Mon module. VERSION AVANT CQRS : aucune base, lit les 4 services métier par Feign.
-  # La 2e instance (8115) et db_stats (projections Axon) arrivent aux phases 5 et 6.
+  # Mon module, côté requêtes CQRS : projections Axon dans db_stats (stats.source=feign : AVANT CQRS).
+  # La 2e instance (8115) arrive à la phase 5 (LoadBalancer).
   statistics-service:
     <<: *spring-service
     build: ./statistics-service
@@ -187,6 +212,9 @@ services:
     environment:
       <<: *spring-env
       INSTANCE_ID: statistics-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      STATS_DB_PASSWORD: ${STATS_DB_PASSWORD}
     ports: ["8105:8105"]
     depends_on: *depends-socle
     healthcheck:
@@ -195,3 +223,5 @@ services:
 
 volumes:
   mysql-data:
+  axon-data:
+  axon-events:

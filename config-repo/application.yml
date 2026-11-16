@@ -26,6 +26,17 @@ spring:
         # pour qu'une instance arrêtée ou revenue soit prise en compte vite (démo, panne n°1)
         ttl: 5s
 
+# CQRS Axon (phase 3) : Axon Server pour les commandes, les événements et les requêtes.
+# Jackson pour tous les messages (XStream, le défaut d'Axon 4, est déprécié et lit du XML) ;
+# les contrats d'événements sont dans le module events-api.
+axon:
+  axonserver:
+    servers: ${AXON_SERVER:localhost:8124}
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
+
 management:
   endpoints:
     web:

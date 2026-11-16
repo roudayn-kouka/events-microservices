@@ -8,7 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Traduit les erreurs d'un appel Feign : 404 distant → 404 avec le message fourni, panne → 503.
  * AVANT CQRS, une panne de l'un des quatre services rend donc les statistiques indisponibles :
- * c'est le couplage que la phase 6 supprime.
+ * c'est le couplage que la phase 3 (CQRS) supprime.
  */
 public final class RemoteCall {
 

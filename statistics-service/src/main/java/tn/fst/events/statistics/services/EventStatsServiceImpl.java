@@ -99,7 +99,7 @@ public class EventStatsServiceImpl implements IEventStatsService {
                 .coutTotalLogistiqueReservee(cout)
                 .participantsParTache(countByTache(participants))
                 .nbFeedbacks(nbFeedbacks)
-                .noteMoyenne(nbFeedbacks == 0 ? 0.0 : somme / nbFeedbacks)
+                .noteMoyenne(nbFeedbacks == 0 ? 0.0 : arrondi(somme / nbFeedbacks))
                 .build();
     }
 
@@ -149,7 +149,7 @@ public class EventStatsServiceImpl implements IEventStatsService {
                 .nbLogistics(logistics.size())
                 .nbLogisticsReservees(reservees.size())
                 .coutLogistiqueReservee(coutReserve(reservees))
-                .averageRating(moyenne == null ? 0.0 : moyenne.averageRating())
+                .averageRating(moyenne == null ? 0.0 : arrondi(moyenne.averageRating()))
                 .nbFeedbacks(moyenne == null ? 0 : moyenne.totalFeedbacks())
                 .build();
     }
@@ -173,6 +173,11 @@ public class EventStatsServiceImpl implements IEventStatsService {
             return List.of();
         }
         return ids.stream().map(parId::get).filter(Objects::nonNull).toList();
+    }
+
+    /** Note sur 5 arrondie à 2 décimales (MySQL renvoie AVG d'un entier avec 4 décimales : 4,3333). */
+    static double arrondi(double note) {
+        return Math.round(note * 100) / 100.0;
     }
 
     private static float coutReserve(List<LogisticsDTO> reservees) {

@@ -4,12 +4,16 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.axonframework.commandhandling.CommandExecutionException;
+import org.axonframework.commandhandling.gateway.CommandGateway;
+import org.axonframework.modelling.command.AggregateNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -19,16 +23,25 @@ import tn.fst.events.event.clients.LogisticsDTO;
 import tn.fst.events.event.clients.ParticipantClient;
 import tn.fst.events.event.clients.ParticipantDTO;
 import tn.fst.events.event.clients.RemoteCall;
+import tn.fst.events.event.commands.ErreurCommande;
+import tn.fst.events.event.commands.EventCommands.AffecterLogistique;
+import tn.fst.events.event.commands.EventCommands.AffecterParticipant;
+import tn.fst.events.event.commands.EventCommands.CreateEvent;
+import tn.fst.events.event.commands.EventCommands.DeleteEvent;
+import tn.fst.events.event.commands.EventCommands.UpdateEvent;
+import tn.fst.events.event.commands.EventCommands.UpdateEventCost;
 import tn.fst.events.event.dto.EventDetailsDTO;
 import tn.fst.events.event.entities.Event;
 import tn.fst.events.event.repositories.EventRepository;
 
 /**
- * Repris de feature/event (Nour Mustapha), avec les corrections de feature/feedback
- * (participant introuvable → 404 ; participants obligatoires → 400 ; événement sans logistique
- * ignoré par getLogisticsDates au lieu de renvoyer null).
- * Les accès directs à ParticipantRepository et LogisticsRepository (autres bases) sont remplacés
- * par des appels OpenFeign vers participant-service et logistics-service.
+ * Repris de feature/event (Nour Mustapha), avec les corrections de feature/feedback.
+ *
+ * <p>Phase 2 : les accès aux bases participant et logistique sont devenus des appels OpenFeign.
+ * <p>Phase 3 (CQRS) : les ÉCRITURES sont des commandes envoyées à EventAggregate
+ * (CommandGateway, event sourcing dans Axon Server) ; les LECTURES restent sur la table event de
+ * db_event, devenue le modèle de lecture tenu à jour par EventProjection. Les vérifications qui
+ * demandent le réseau (Feign) sont faites ici, avant d'envoyer la commande.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -42,6 +55,7 @@ public class EventServicesImpl implements IEventServices {
     private final EventRepository eventRepository;
     private final ParticipantClient participantClient;
     private final LogisticsClient logisticsClient;
+    private final CommandGateway commandGateway;
 
     @Override
     public Event addEvent(Event event) {
@@ -49,7 +63,13 @@ public class EventServicesImpl implements IEventServices {
             event.setIdEvent(UUID.randomUUID().toString());
         }
         validerDates(event);
-        return eventRepository.save(event);
+        envoyer(new CreateEvent(event.getIdEvent(), event.getDescription(), event.getDateDebut(), event.getDateFin(),
+                Set.copyOf(participantIds(event))));
+        // comportement du monolithe conservé : un coût fourni à la création est enregistré
+        if (event.getCout() != 0f) {
+            envoyer(new UpdateEventCost(event.getIdEvent(), event.getCout()));
+        }
+        return lire(event.getIdEvent());
     }
 
     @Override
@@ -62,18 +82,21 @@ public class EventServicesImpl implements IEventServices {
         return eventRepository.findAll();
     }
 
+    /** Description et dates par UpdateEvent ; le coût, s'il a changé, par UpdateEventCost. */
     @Override
     public Event updateEvent(Event event) {
         validerDates(event);
-        return eventRepository.save(event);
+        envoyer(new UpdateEvent(event.getIdEvent(), event.getDescription(), event.getDateDebut(), event.getDateFin()));
+        envoyer(new UpdateEventCost(event.getIdEvent(), event.getCout()));
+        return lire(event.getIdEvent());
     }
 
     @Override
     public void deleteEvent(String idEvent) {
-        eventRepository.deleteById(idEvent);
+        envoyer(new DeleteEvent(idEvent));
     }
 
-    /** Monolithe : participant.getEvents().add(event) (relation JPA). Ici : l'ID rejoint event.participantIds. */
+    /** Monolithe : participant.getEvents().add(event) (relation JPA). Ici : l'ID rejoint la commande de création. */
     @Override
     public Event addAffectEvenParticipant(Event event, int idParticipant) {
         verifierParticipant(idParticipant);
@@ -92,13 +115,13 @@ public class EventServicesImpl implements IEventServices {
 
     @Override
     public Event affecterParticipant(String idEvent, int idParticipant) {
-        Event event = evenementExistant(idEvent);
+        evenementExistant(idEvent);
         verifierParticipant(idParticipant);
-        participantIds(event).add(idParticipant);
-        return eventRepository.save(event);
+        envoyer(new AffecterParticipant(idEvent, idParticipant));
+        return lire(idEvent);
     }
 
-    /** Monolithe : event.getLogistics().add(logistics) puis logisticsRepository.save. Ici : Feign + ID. */
+    /** Monolithe : event.getLogistics().add(logistics). Ici : création par Feign, puis commande AffecterLogistique. */
     @Override
     public LogisticsDTO addAffectLog(LogisticsDTO logistics, String descriptionEvent) {
         Event event = eventRepository.findFirstByDescription(descriptionEvent)
@@ -136,6 +159,10 @@ public class EventServicesImpl implements IEventServices {
         }
     }
 
+    /**
+     * Une commande UpdateEventCost par événement de l'organisateur : l'agrégat ne publie un
+     * EventCostUpdated que si le coût a changé (pas d'événement par minute dans l'event store).
+     */
     @Override
     public List<Event> calculCout() {
         Set<Integer> organisateurs = RemoteCall.call("participant-service", "Organisateur introuvable",
@@ -145,16 +172,24 @@ public class EventServicesImpl implements IEventServices {
             return List.of();
         }
         List<Event> events = eventRepository.findDistinctByParticipantIdsIn(organisateurs);
+        List<Event> calcules = new ArrayList<>();
         for (Event event : events) {
             Set<Integer> ids = logisticsIds(event);
             // somme remise à zéro pour chaque événement ; aucun appel si pas de logistique
             float somme = ids.isEmpty() ? 0f : RemoteCall.call("logistics-service", "Logistique introuvable",
                     () -> logisticsClient.coutReserve(ids));
+            try {
+                envoyer(new UpdateEventCost(event.getIdEvent(), somme));
+            } catch (ResponseStatusException e) {
+                // un événement refusé (supprimé, absent de l'event store) ne bloque pas les autres
+                log.warn("Coût de l'événement {} non mis à jour : {}", event.getIdEvent(), e.getReason());
+                continue;
+            }
+            // copie détachée renvoyée à l'appelant ; la table est mise à jour par la projection
             event.setCout(somme);
-            eventRepository.save(event);
-            log.info("Cout de l'Event {} est {}", event.getDescription(), somme);
+            calcules.add(event);
         }
-        return events;
+        return calcules;
     }
 
     @Override
@@ -170,13 +205,48 @@ public class EventServicesImpl implements IEventServices {
                 e.getCout(), participants, logistics);
     }
 
+    // ------------------------------------------------------------------ commandes
+
+    /**
+     * Envoie une commande et attend son traitement (agrégat + projection locale). Une règle refusée
+     * par l'agrégat revient avec son code dans les « détails » (ErreurCommande, voir AxonConfig).
+     */
+    void envoyer(Object commande) {
+        try {
+            commandGateway.sendAndWait(commande);
+        } catch (CommandExecutionException e) {
+            throw traduire(e);
+        } catch (AggregateNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found with id " + e.getAggregateIdentifier());
+        }
+    }
+
+    static ResponseStatusException traduire(CommandExecutionException e) {
+        Object details = e.getDetails().orElse(null);
+        if (details instanceof ErreurCommande erreur) {
+            return new ResponseStatusException(HttpStatus.valueOf(erreur.status()), erreur.message());
+        }
+        if (details instanceof Map<?, ?> champs && champs.get("status") instanceof Number status) {
+            return new ResponseStatusException(HttpStatus.valueOf(status.intValue()), String.valueOf(champs.get("message")));
+        }
+        if (e.getCause() instanceof AggregateNotFoundException
+                || String.valueOf(e.getMessage()).contains("not found in the event store")) {
+            return new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found");
+        }
+        return new ResponseStatusException(HttpStatus.CONFLICT, "Commande refusée : " + e.getMessage());
+    }
+
+    private Event lire(String idEvent) {
+        return eventRepository.findById(idEvent).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR, "Modèle de lecture non mis à jour pour l'événement " + idEvent));
+    }
+
     // ------------------------------------------------------------------ outils
 
     private LogisticsDTO rattacherLogistique(Event event, LogisticsDTO logistics) {
         LogisticsDTO creee = RemoteCall.call("logistics-service", "Logistique introuvable",
                 () -> logisticsClient.addLogistics(logistics));
-        logisticsIds(event).add(creee.idLog());
-        eventRepository.save(event);
+        envoyer(new AffecterLogistique(event.getIdEvent(), creee.idLog()));
         return creee;
     }
 
