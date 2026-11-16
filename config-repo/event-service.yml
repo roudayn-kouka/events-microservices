@@ -18,7 +18,8 @@ spring:
         config:
           default:
             connect-timeout: 2000
-            read-timeout: 5000
+            # 10 s : c'est le TimeLimiter (5 s, application.yml) qui coupe un service lent
+            read-timeout: 10000
 
 events:
   cout:

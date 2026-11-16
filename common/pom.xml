@@ -11,7 +11,7 @@
 
     <artifactId>common</artifactId>
     <name>common</name>
-    <description>Briques web partagées par les services métier (erreurs JSON, en-tête X-Instance-Id), auto-configurées</description>
+    <description>Briques web partagées par les services métier (erreurs JSON, en-tête X-Instance-Id, pannes simulées, résilience Feign), auto-configurées</description>
 
     <dependencies>
         <!-- Fournies par chaque service : le module ne les impose pas -->
@@ -23,6 +23,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- Résilience des appels Feign (phase 4) : utilisée seulement par les services qui ont Feign -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>

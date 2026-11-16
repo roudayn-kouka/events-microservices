@@ -19,6 +19,10 @@ eureka:
     lease-expiration-duration-in-seconds: 15
 
 spring:
+  datasource:
+    hikari:
+      # base inaccessible : échec en 3 s au lieu de 30 s (panne 5, fail fast)
+      connection-timeout: 3000
   cloud:
     loadbalancer:
       cache:
@@ -38,10 +42,13 @@ axon:
     messages: jackson
 
 management:
+  health:
+    circuitbreakers:
+      enabled: true
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,refresh
+        include: health,info,prometheus,refresh,circuitbreakers,circuitbreakerevents,retries,ratelimiters,timelimiters
   endpoint:
     health:
       probes:

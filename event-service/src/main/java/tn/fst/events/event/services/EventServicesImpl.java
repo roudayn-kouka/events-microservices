@@ -192,17 +192,36 @@ public class EventServicesImpl implements IEventServices {
         return calcules;
     }
 
+    /**
+     * FALLBACK DÉGRADÉ (phase 4) : la vue composée reste disponible si participant-service ou
+     * logistics-service est en panne ; la partie manquante est vide et signalée. (Les écritures,
+     * elles, sont refusées : on n'inscrit pas un participant dont on ne peut pas vérifier l'existence.)
+     */
     @Override
     public EventDetailsDTO details(String idEvent) {
         Event e = evenementExistant(idEvent);
+        List<String> avertissements = new ArrayList<>();
         List<ParticipantDTO> participants = participantIds(e).isEmpty() ? List.of()
-                : RemoteCall.call("participant-service", "Participant introuvable",
-                        () -> participantClient.getParticipants(e.getParticipantIds()));
+                : ouDegrade(avertissements, "participants", () -> RemoteCall.call("participant-service",
+                        "Participant introuvable", () -> participantClient.getParticipants(e.getParticipantIds())));
         List<LogisticsDTO> logistics = logisticsIds(e).isEmpty() ? List.of()
-                : RemoteCall.call("logistics-service", "Logistique introuvable",
-                        () -> logisticsClient.getLogistics(e.getLogisticsIds()));
+                : ouDegrade(avertissements, "logistique", () -> RemoteCall.call("logistics-service",
+                        "Logistique introuvable", () -> logisticsClient.getLogistics(e.getLogisticsIds())));
         return new EventDetailsDTO(e.getIdEvent(), e.getDescription(), e.getDateDebut(), e.getDateFin(),
-                e.getCout(), participants, logistics);
+                e.getCout(), participants, logistics, avertissements);
+    }
+
+    /** Panne d'un service (5xx, 429) : liste vide et avertissement ; une erreur métier (4xx) remonte. */
+    private static <T> List<T> ouDegrade(List<String> avertissements, String partie, java.util.function.Supplier<List<T>> lecture) {
+        try {
+            return lecture.get();
+        } catch (ResponseStatusException ex) {
+            if (ex.getStatusCode().is4xxClientError() && ex.getStatusCode().value() != 429) {
+                throw ex;
+            }
+            avertissements.add(partie + " indisponible : " + ex.getReason());
+            return List.of();
+        }
     }
 
     // ------------------------------------------------------------------ commandes

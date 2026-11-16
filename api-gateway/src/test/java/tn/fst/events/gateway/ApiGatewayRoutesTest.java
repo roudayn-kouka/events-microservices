@@ -49,7 +49,8 @@ class ApiGatewayRoutesTest {
 
     @Test
     void repond503QuandAucuneInstanceNEstEnregistree() {
-        client.get().uri("/api/participants").exchange().expectStatus().isEqualTo(503);
+        client.get().uri("/api/participants").exchange().expectStatus().isEqualTo(503)
+                .expectBody().jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("participant-service indisponible (Gateway)"));
     }
 
     @Test

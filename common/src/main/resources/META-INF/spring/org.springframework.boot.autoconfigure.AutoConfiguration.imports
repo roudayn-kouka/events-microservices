@@ -1,1 +1,2 @@
 tn.fst.events.common.web.CommonWebAutoConfiguration
+tn.fst.events.common.resilience.ResilienceFeignAutoConfiguration

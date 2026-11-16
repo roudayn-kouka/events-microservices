@@ -315,4 +315,38 @@ class EventServicesImplMockitoTest {
         assertTrue(details.logistics().isEmpty());
         verifyNoInteractions(participantClient, logisticsClient);
     }
+
+    // ---------------------------------------------------------------- ajoutés (phase 4, fallback dégradé)
+
+    @Test
+    void detailsRestentDisponiblesQuandParticipantServiceEstEnPanne() {
+        Event event = event();
+        event.setDescription("Gala");
+        event.setParticipantIds(new HashSet<>(Set.of(1)));
+        event.setLogisticsIds(new HashSet<>(Set.of(9)));
+        when(eventRepository.findById("e-1")).thenReturn(Optional.of(event));
+        when(participantClient.getParticipants(Set.of(1))).thenThrow(new tn.fst.events.common.resilience
+                .ServiceIndisponibleException(HttpStatus.SERVICE_UNAVAILABLE, "participant-service",
+                        "circuit ouvert, service considéré en panne (appel non tenté)", null));
+        when(logisticsClient.getLogistics(Set.of(9))).thenReturn(List.of(logistics(9, true, 1f, 1)));
+
+        EventDetailsDTO details = service.details("e-1");
+
+        assertTrue(details.participants().isEmpty());
+        assertEquals(1, details.logistics().size());
+        assertEquals(List.of("participants indisponible : participant-service : circuit ouvert, service considéré en panne (appel non tenté)"),
+                details.avertissements());
+    }
+
+    @Test
+    void uneErreurMetierDansLesDetailsNEstPasMasquee() {
+        Event event = event();
+        event.setParticipantIds(new HashSet<>(Set.of(1)));
+        when(eventRepository.findById("e-1")).thenReturn(Optional.of(event));
+        when(participantClient.getParticipants(Set.of(1))).thenThrow(FeignErreurs.introuvable("/participants"));
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class, () -> service.details("e-1"));
+
+        assertEquals(HttpStatus.NOT_FOUND, error.getStatusCode());
+    }
 }

@@ -213,7 +213,7 @@ class EventRestControllerMockTest {
     void detailsExposeLesObjetsLusParFeign() throws Exception {
         when(eventServices.details(ID)).thenReturn(new EventDetailsDTO(ID, "Gala", LocalDate.of(2026, 5, 1),
                 LocalDate.of(2026, 5, 2), 10f, List.of(new ParticipantDTO(1, "Tounsi", "Ahmed", "ORGANISATEUR")),
-                List.of(new LogisticsDTO(5, "Chaises", true, 2.5f, 4))));
+                List.of(new LogisticsDTO(5, "Chaises", true, 2.5f, 4)), List.of()));
 
         mockMvc.perform(get("/events/" + ID + "/details"))
                 .andExpect(status().isOk())

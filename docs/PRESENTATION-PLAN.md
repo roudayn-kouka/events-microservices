@@ -16,7 +16,7 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 9 bis | Docker Compose du socle | Healthchecks, `depends_on: service_healthy`, `.env` généré, `make up` / `make health`, redémarrage tolérant (fail-fast + retry). Commandes D1 à D6 et C6 | C5, C6, C14 |
 | 10 | Services et Feign | Relations JPA remplacées par des ID et des appels Feign | _phase 2_ |
 | 11 | **CQRS Axon (mon module)** | Agrégat, commandes, projections dans statistics-service, replay, comparaison AVANT / APRÈS | C44 à C52 |
-| 12 | Résilience4j | Configuration, fallbacks, 5 pannes | _phase 4_ |
+| 12 | Résilience4j | Configuration, fallbacks, 5 pannes, circuit OPEN → HALF_OPEN → CLOSED | C53 à C60 |
 | 13 | LoadBalancer | Répartition prouvée | _phase 5_ |
 | 14 | Observabilité | Prometheus, Grafana (circuit breaker), Zipkin | _phase 6_ |
 | 15 | Swagger et Postman | API agrégées, collection | _phase 7_ |
@@ -391,3 +391,63 @@ public class ProjectionStatsSource implements StatsSource { … }
 - une `List` renvoyée par un `@QueryHandler` perdait le type de ses éléments en traversant Axon Server : elle est enveloppée dans `ListeStats` ;
 - un agrégat absent arrivait « sans détails » chez l'appelant (409) : les erreurs sont emballées avec leur code (404) ;
 - un événement sans agrégat bloquait tout `calculCout` : le calcul est isolé par événement.
+
+## Résilience4j et pannes (phase 4) — slide 12 et annexes
+
+**Où** : sur **tous les appels OpenFeign** entre services (event → participant et logistics ; feedback → event et participant ; statistics → les 4 en mode AVANT CQRS), sans toucher au code métier. `common/ClientsResilients` enveloppe chaque client `@FeignClient` : une instance par service **appelé**, dans cet ordre :
+
+`Retry( RateLimiter( CircuitBreaker( TimeLimiter( appel ) ) ) )`
+
+| Mécanisme | Réglage (`config-repo/resilience-feign.yml`) | Rôle |
+|---|---|---|
+| Retry | 3 tentatives, 500 ms d'attente, **lectures (GET) seulement** | coupure brève ; un POST n'est jamais rejoué (risque de doublon) |
+| RateLimiter | 5 appels par seconde, 1 s d'attente au plus | protège le service appelé ; au-delà : 429 |
+| CircuitBreaker | OPEN à 50 % d'échecs sur 10 appels (5 au minimum) ; 10 s ouvert ; 3 appels d'essai | cesse d'appeler un service en panne : réponse immédiate |
+| TimeLimiter | 5 s | abandonne un service lent |
+| Gateway | un CircuitBreaker par route, fallback `/indisponible/{service}` | 503 JSON au lieu d'un 500 |
+
+Les erreurs **métier** (404, 400, 409) ne sont ni retentées ni comptées comme une panne.
+
+**Fallbacks explicites** : chaque cause est nommée dans la réponse.
+
+| Cause | HTTP | Message |
+|---|---|---|
+| circuit ouvert | 503 | « participant-service : circuit ouvert, service considéré en panne (appel non tenté) » |
+| trop lent | 504 | « pas de réponse en 5000 ms (TimeLimiter) après 3 tentatives » |
+| trop d'appels | 429 | « trop d'appels (RateLimiter : 5 par 1000 ms) » |
+| réponse illisible | 502 | « réponse incorrecte, rejetée » |
+| réseau | 503 | « injoignable (erreur réseau) après 3 tentatives » |
+| **lecture composée** | **200** | vue `/events/{id}/details` **dégradée** : liste vide et `avertissements` |
+
+**Les 5 pannes, mesurées** (`make panne N=1` à `5`, rétablies automatiquement) :
+
+| # | Panne | Comment | Résultat mesuré |
+|---|---|---|---|
+| 1 | Disponibilité | `docker compose stop participant-service` | 1er appel : 3 tentatives puis fallback ; circuit **OPEN** (60 %) ; appels suivants en **0,01 s** ; inscription 503 ; au redémarrage : HALF_OPEN puis CLOSED |
+| 2 | Temps de réponse | latence de 7 s posée **à chaud** (Config Server + `/actuator/refresh`) | **504** « pas de réponse en 5000 ms (TimeLimiter) » ; circuit OPEN ; retour à chaud : 200 en 0,02 s |
+| 3 | Réponse incorrecte | JSON tronqué en HTTP 200, à chaud | **502** « réponse incorrecte, rejetée » ; rien d'enregistré ; retour à chaud, CLOSED |
+| 4 | Erreur réseau | mauvaise URL de participant-service dans event-service, à chaud | « injoignable (erreur réseau) après 3 tentatives » ; **correction à chaud** par `/actuator/refresh` ; CLOSED |
+| 5 | Dépendance externe | compte MySQL de participant verrouillé | santé de participant **DOWN** (`db`) ; HTTP 500 → circuit d'event-service OPEN (83 %) ; déverrouillage : UP puis CLOSED |
+
+**Avant / après : un appel Feign.**
+
+```java
+// AVANT (phase 2) : une panne donne un 503 générique, après le délai de connexion, à chaque appel
+RemoteCall.call("participant-service", "Participant introuvable", () -> participantClient.getParticipant(id));
+
+// APRÈS (phase 4) : le même code métier ; le client Feign est enveloppé par ClientsResilients
+// → Retry ×3, RateLimiter, CircuitBreaker, TimeLimiter 5 s, puis fallback qui nomme la cause
+// ex. 503 « participant-service : circuit ouvert, service considéré en panne (appel non tenté) »
+```
+
+**Avant / après : la Gateway quand un service est arrêté.**
+
+```yaml
+# AVANT : connexion refusée → HTTP 500 sans explication
+filters: [StripPrefix=1]
+# APRÈS : CircuitBreaker par route → 503 JSON « logistics-service indisponible (Gateway) : … »
+filters:
+  - StripPrefix=1
+  - name: CircuitBreaker
+    args: {name: gw-logistics-service, fallbackUri: forward:/indisponible/logistics-service}
+```
