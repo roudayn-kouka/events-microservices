@@ -4,7 +4,7 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 3,,Epic,Bases de données MySQL,Une base et un utilisateur par microservice sur un serveur MySQL,Highest,mysql,,To Do
 4,,Epic,Microservices métier,"event, participant, logistics, feedback, statistics : reprise des 5 branches de l'équipe",Highest,services,,To Do
 5,,Epic,OpenFeign,Remplacement des relations JPA inter-services par des ID et des appels Feign,Highest,feign,,To Do
-6,,Epic,Résilience4j et pannes,"Retry, RateLimiter, CircuitBreaker, TimeLimiter, fallbacks, 5 types de défaillance",Highest,resilience4j,,To Do
+6,,Epic,Résilience4j et pannes,"Retry, RateLimiter, CircuitBreaker, TimeLimiter, fallbacks, 5 types de défaillance",Highest,resilience4j,,Done
 7,,Epic,Équilibrage de charge,"Spring Cloud LoadBalancer, 2 instances, preuve de répartition",High,loadbalancer,,To Do
 8,,Epic,CQRS Axon,"Axon Server, EventAggregate, projections et requêtes dans statistics-service (mon module)",Highest,axon;cqrs,,To Do
 9,,Epic,Observabilité,"Micrometer, Prometheus, Grafana, Zipkin, alertes",High,observability,,To Do
@@ -49,13 +49,13 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 48,8,Story,Requêtes statistiques,@QueryHandler via QueryGateway ; API de requêtes séparée de l'API de commandes,Highest,axon;cqrs;statistics,3,Done
 49,47,Task,Note moyenne des feedbacks,Moyenne et nombre d'avis par événement et au global,High,statistics,1,Done
 50,8,Story,Replay de la projection,Reset du token et reconstruction de db_stats depuis l'event store,High,axon;statistics,2,Done
-51,6,Story,Configuration Resilience4j,"Retry 3 x 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s dans config-repo",Highest,resilience4j,3,To Do
+51,6,Story,Configuration Resilience4j,"Retry 3 x 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s dans config-repo",Highest,resilience4j,3,Done
 52,51,Task,Fallbacks explicites,"Une méthode fallback par appel Feign ; 503 clair en écriture, réponse dégradée en lecture",Highest,resilience4j,2,To Do
-53,6,Task,Panne 1 : disponibilité,scripts/pannes/1-disponibilite.sh : docker stop d'un service appelé,High,pannes,1,To Do
-54,6,Task,Panne 2 : temps de réponse > 5 s,Latence simulée activée par une propriété du Config Server,High,pannes,1,To Do
-55,6,Task,Panne 3 : réponse incorrecte,"Réponse corrompue détectée, rejetée, fallback déclenché",High,pannes,1,To Do
-56,6,Task,Panne 4 : erreur réseau,URL mal configurée entre services puis correction à chaud (/actuator/refresh),High,pannes,1,To Do
-57,6,Task,Panne 5 : dépendance externe,Base de données inaccessible : health DOWN et circuit ouvert,High,pannes,1,To Do
+53,6,Task,Panne 1 : disponibilité,scripts/pannes/1-disponibilite.sh : docker stop d'un service appelé,High,pannes,1,Done
+54,6,Task,Panne 2 : temps de réponse > 5 s,Latence simulée activée par une propriété du Config Server,High,pannes,1,Done
+55,6,Task,Panne 3 : réponse incorrecte,"Réponse corrompue détectée, rejetée, fallback déclenché",High,pannes,1,Done
+56,6,Task,Panne 4 : erreur réseau,URL mal configurée entre services puis correction à chaud (/actuator/refresh),High,pannes,1,Done
+57,6,Task,Panne 5 : dépendance externe,Base de données inaccessible : health DOWN et circuit ouvert,High,pannes,1,Done
 58,7,Story,Deux instances et X-Instance-Id,participant-service x2 (Feign) et statistics-service x2 (Gateway) ; instance exposée dans chaque réponse,High,loadbalancer,2,To Do
 59,58,Task,Script de répartition,N requêtes et comptage par instance,Medium,loadbalancer,1,To Do
 60,9,Story,Métriques Prometheus,"actuator/prometheus sur tous les services, scraping via Eureka",High,prometheus,2,To Do

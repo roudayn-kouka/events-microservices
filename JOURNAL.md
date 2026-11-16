@@ -8,6 +8,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 1 — Socle Spring Cloud | 2026-11-15 20:46 | 2026-11-15 22:10 | 1 h 24 | 1 j | Config Server, Eureka, Gateway, MySQL, Compose |
 | 2 — Services métier + Feign | 2026-11-15 22:10 | 2026-11-15 23:59 | 1 h 49 | 2 j | 5 services, 179 tests d'origine repris, `make seed` |
 | 3 — CQRS Axon | 2026-11-16 15:35 | 2026-11-16 17:10 | 1 h 35 | 2 j | agrégat, publications, projections et requêtes de statistics-service, replay |
+| 4 — Resilience4j et pannes | 2026-11-16 19:46 | 2026-11-16 21:10 | 1 h 24 | 1 j | 4 mécanismes sur tous les appels Feign, fallbacks, Gateway 503, 5 pannes |
 
 ## Phase 3 — CQRS Axon
 
@@ -25,6 +26,22 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   9. moyenne affichée 4.19998 (AVG MySQL à 4 décimales) : arrondi à 2 décimales.
 - **Vérifié** : 318 tests verts ; `make health` vert ; Newman 64 requêtes, 122 assertions, 0 échec ; comparaison AVANT / APRÈS mesurée (CAPTURES).
 - **Reporté à la phase 4** : la Gateway répond 500, et non 503, quand un service est arrêté pendant le délai du cache du LoadBalancer.
+
+## Phase 4 — Resilience4j et pannes
+
+- **Début** : 2026-11-16 19:46 — **fin** : 21:10 — **durée réelle** : 1 h 24 — estimation : 1 j.
+- **Fait** :
+  - `common/ClientsResilients` : Retry (lectures), RateLimiter, CircuitBreaker et TimeLimiter sur chaque client Feign, et fallbacks qui nomment la cause ;
+  - pannes simulées à chaud (latence, réponse corrompue, URL forcée) ;
+  - vue détaillée dégradée ;
+  - CircuitBreaker et fallback 503 dans la Gateway ;
+  - 5 scripts de panne, rétablis automatiquement (`make panne N=…`).
+- **Problèmes et corrections** :
+  1. Lombok absent de `common` : loggers SLF4J explicites ;
+  2. réglages Resilience4j citant des classes Feign lus par la Gateway (sans Feign) : fichier dédié `resilience-feign.yml`, demandé seulement par les 3 services concernés ;
+  3. `read` d'une sortie curl sans saut de ligne : `set -e` arrêtait le script ;
+  4. **retour à la normale à chaud inopérant** (le refresh gardait la source supprimée) : valeur neutre avant la suppression (THEORIE Q23).
+- **Vérifié** : 334 tests verts ; les 5 pannes jouées en réel ; Newman 64 requêtes, 0 échec ; `make health` vert ; la Gateway répond 503 JSON au lieu de 500.
 
 ## Périmètre révisé (2026-11-16, à la demande)
 

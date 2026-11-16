@@ -197,7 +197,18 @@ Variables utiles : `S=http://localhost:8088/api/stats`. `$EV` est l'UUID d'un é
 | A12 | `mvn -B -pl statistics-service -Dtest='StatsCqrsIntegrationTest,QuerySerialisationTest' test` | Chaîne CQRS de bout en bout et sérialisation réelle des réponses | verts |
 
 ## Resilience4j
-_Phase 4._
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| R1 | `make panne N=1` | Panne 1 : participant-service arrêté | Retry puis circuit **OPEN** ; vue dégradée ; 503 ; puis HALF_OPEN → CLOSED |
+| R2 | `make panne N=2` | Panne 2 : latence de 7 s (à chaud) | 504 « pas de réponse en 5000 ms (TimeLimiter) » |
+| R3 | `make panne N=3` | Panne 3 : réponse corrompue (à chaud) | 502 « réponse incorrecte, rejetée » |
+| R4 | `make panne N=4` | Panne 4 : mauvaise URL, puis correction à chaud | « injoignable (erreur réseau) après 3 tentatives », puis CLOSED |
+| R5 | `make panne N=5` | Panne 5 : base de participant inaccessible | santé DOWN, circuit OPEN, puis UP et CLOSED |
+| R6 | `curl -s localhost:8101/actuator/circuitbreakers \| jq` | État des circuits d'event-service | `participant-service`, `logistics-service` : CLOSED, OPEN ou HALF_OPEN |
+| R7 | `curl -s localhost:8101/actuator/circuitbreakerevents \| jq -c '.circuitBreakerEvents[] \| {circuitBreakerName, type, creationTime}' \| tail` | Historique des transitions | `STATE_TRANSITION` CLOSED_TO_OPEN, OPEN_TO_HALF_OPEN, HALF_OPEN_TO_CLOSED |
+| R8 | `curl -s localhost:8101/actuator/health \| jq .components.circuitBreakers` | Santé des circuits | détails par circuit ; le service reste UP (`allow-health-indicator-to-fail: false`) |
+| R9 | `docker compose stop logistics-service; curl -s localhost:8088/api/logistics \| jq -c; docker compose --profile core start logistics-service` | Fallback de la Gateway | 503 « logistics-service indisponible (Gateway) : … » |
+| R10 | `seq 30 \| xargs -P 30 -I{} curl -s -o /dev/null -w '%{http_code}\n' localhost:8088/api/events/$EV/details \| sort \| uniq -c` | RateLimiter (5/s vers participant-service) | des 200 ; au-delà de 1 s d'attente, les appels en trop sont refusés par le RateLimiter (vue dégradée) |
 
 ## LoadBalancer
 _Phase 5._

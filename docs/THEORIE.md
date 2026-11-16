@@ -163,6 +163,35 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Les exceptions** ne traversent pas le réseau avec leur classe : seuls le message et les **détails** voyagent. Les règles métier sont donc emballées dans une `CommandExecutionException` ou une `QueryExecutionException`, avec `{status, message}`, puis retraduites en HTTP.
 - **Les requêtes sans paramètre** (records vides) demandent `spring.jackson.serialization.fail-on-empty-beans: false`.
 
+## Résilience (phase 4)
+
+### Q20. Quels sont les états d'un circuit breaker, et quels réglages avez-vous choisis ?
+
+- **CLOSED** : les appels passent ; Resilience4j mesure les échecs sur une fenêtre glissante (ici les 10 derniers appels, à partir de 5). Au-delà de **50 %** d'échecs, ou d'appels lents (plus de 4 s), le circuit **s'ouvre**.
+- **OPEN** : les appels **ne sont pas tentés** ; le fallback répond tout de suite (0,01 s mesuré, contre 13 s pour le premier appel en panne). On protège l'appelant (pas de threads bloqués) et le service malade (pas de charge supplémentaire).
+- **HALF_OPEN** : après **10 s**, 3 appels d'essai sont autorisés. S'ils réussissent → CLOSED ; sinon → OPEN à nouveau.
+- **Ce qui ne compte pas comme une panne** : les erreurs métier (404, 400, 409). Un participant inexistant ne doit pas ouvrir le circuit.
+- **Santé** : `allow-health-indicator-to-fail: false`. Un circuit ouvert vers participant-service ne rend pas event-service « DOWN » : il fonctionne encore, en mode dégradé.
+
+### Q21. Pourquoi le Retry ne s'applique-t-il qu'aux lectures ? Dans quel ordre sont les protections ?
+
+- **Idempotence** : un GET peut être rejoué sans risque. Un POST qui a expiré a **peut-être** abouti : le rejouer créerait un doublon (deux logistiques, deux avis). On ne retente donc que les méthodes `@GetMapping` des clients Feign.
+- **Ordre** : `Retry( RateLimiter( CircuitBreaker( TimeLimiter( appel ) ) ) )`. Chaque tentative consomme une autorisation du RateLimiter et compte dans le circuit. Quand le circuit s'ouvre pendant les tentatives, le Retry s'arrête (`CallNotPermittedException` est ignorée par le Retry).
+- **Coût du Retry** : il multiplie le temps d'échec (3 × 5 s dans la panne 2). C'est pourquoi le TimeLimiter est court et le circuit s'ouvre vite.
+
+### Q22. Fallback : refuser ou dégrader ? Et le TimeLimiter par rapport au délai Feign ?
+
+- **Écriture** : on **refuse**, avec un message clair. On n'inscrit pas un participant dont on ne peut pas vérifier l'existence (503 « circuit ouvert »).
+- **Lecture composée** : on **dégrade**. `/events/{id}/details` répond 200 avec ce qui est disponible, et `avertissements` dit ce qui manque et pourquoi.
+- **Déjà résolu par CQRS** : les statistiques ne dépendent plus des autres services (Q15). C'est la meilleure des résiliences, il n'y a rien à appeler.
+- **TimeLimiter (5 s) contre `read-timeout` Feign (10 s)** : le TimeLimiter s'applique à tout l'appel (connexion, lecture, décodage) et produit un fallback nommé. Le délai Feign est un filet de sécurité plus large.
+
+### Q23. Comment changez-vous la configuration à chaud, et quel piège avez-vous rencontré ?
+
+- **Mécanisme** : un fichier `config-overrides/<service>.yml`, prioritaire dans le Config Server (profil `composite` : natif + Git), puis `POST /actuator/refresh` sur le service. La réponse liste les clés modifiées, par exemple `["panne.latence-ms"]`. Les propriétés relues à chaque appel (latence, réponse corrompue, URL forcée) changent sans redémarrage.
+- **Piège constaté** : supprimer le fichier puis rafraîchir ne suffit pas. Le refresh répond `[]` et la panne reste active : le client garde la source de propriétés qui a disparu côté serveur. **Parade** : écrire d'abord une **valeur neutre** (`latence-ms: 0`), rafraîchir, puis supprimer le fichier (scripts 2 à 4).
+- **Plusieurs instances** : il faut rafraîchir chacune. Spring Cloud Bus le ferait d'un seul appel, mais il demande RabbitMQ ou Kafka : écarté ici, un script suffit.
+
 ## Sécurité (non implémentée : choix de périmètre)
 
 ### Q19. Comment sécuriseriez-vous la Gateway et les services ?

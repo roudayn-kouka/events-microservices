@@ -145,3 +145,15 @@ Unité : un test `@Test` d'une version distincte de classe, comme l'inventaire i
 | statistics-service ⭐ | 45 | 63 | 18 : projection (5), source projections (3), traduction des erreurs de requête (5), intégration CQRS de bout en bout avec replay (1), sérialisation réelle Axon (3), arrondi (1) | 4 tests d'intégration fixés sur `stats.source=feign` (ils traversent désormais aussi le bus de requêtes) |
 
 Tous modules confondus : **318 tests verts** (`mvn verify`) ; Newman : 64 requêtes, 122 assertions, 0 échec ; `make health` entièrement vert ; couverture JaCoCo de statistics-service : **97 %**.
+
+## Phase 4 — Résilience : tests et vérifications
+
+| Module | Avant | Après | Ajoutés |
+|---|---:|---:|---|
+| common | 5 | 19 | 14 : Retry 3 fois puis fallback, POST jamais retenté, 404 ni retenté ni compté, circuit OPEN puis CLOSED, TimeLimiter, RateLimiter (429), réponse incorrecte, enveloppe des seuls clients Feign ; pannes simulées (latence, réponse corrompue, actuator épargné, URL forcée et sa correction) |
+| event-service | 88 | 90 | 2 : vue détaillée dégradée ; une erreur métier n'est pas masquée |
+| api-gateway | 4 | 4 | — (le test « 503 » vérifie maintenant le message du fallback) |
+
+Aucun test existant supprimé. Dans les tests des règles métier, `events.resilience.enabled: false` : la résilience est testée à part, dans `common`.
+
+Total : **334 tests verts**. Les 5 pannes ont été jouées en réel et rétablies (`make panne N=1` à `5`). Newman : 64 requêtes, 0 échec ; `make health` entièrement vert.

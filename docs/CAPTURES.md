@@ -95,4 +95,15 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [ ] **C51 — APRÈS CQRS : services d'écriture arrêtés** : terminal, commande A7 (et ST8). Visible : `200`. À placer à côté de C41.
 - [ ] **C52 — Replay** : terminal, commande A9. Visible : `202`, puis « identique ».
 
+### Résilience4j et pannes (phase 4)
+
+- [ ] **C53 — Panne 1, disponibilité** : terminal, `make panne N=1`. Visible : le premier appel lent (3 tentatives), puis les appels refusés en 0,01 s, l'état **OPEN**, le 503 explicite, puis HALF_OPEN et CLOSED.
+- [ ] **C54 — Transitions du circuit** : terminal, commande R7, juste après C53. Visible : CLOSED_TO_OPEN, OPEN_TO_HALF_OPEN, HALF_OPEN_TO_CLOSED avec leurs heures.
+- [ ] **C55 — Panne 2, temps de réponse** : `make panne N=2`. Visible : `config-overrides` + `/actuator/refresh` → `["panne.latence-ms"]`, puis 504 « TimeLimiter ».
+- [ ] **C56 — Panne 3, réponse incorrecte** : `make panne N=3`. Visible : le JSON tronqué renvoyé en 200, puis 502 « réponse incorrecte, rejetée ».
+- [ ] **C57 — Panne 4, erreur réseau et correction à chaud** : `make panne N=4`. Visible : « injoignable (erreur réseau) après 3 tentatives », puis la correction par refresh et CLOSED.
+- [ ] **C58 — Panne 5, dépendance externe** : `make panne N=5`. Visible : santé `{"status":"DOWN","db":"DOWN"}`, circuit OPEN, puis UP et CLOSED.
+- [ ] **C59 — Fallback de la Gateway** : commande R9. Visible : 503 JSON « … indisponible (Gateway) » (à placer à côté du 500 de la phase 3).
+- [ ] **C60 — Configuration** : `config-repo/resilience-feign.yml` dans l'IDE. Visible : Retry 3 × 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s.
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._
