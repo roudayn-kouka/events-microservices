@@ -16,6 +16,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 | 2 | Services métier + Feign (statistics en version AVANT CQRS), `make seed` | Terminée |
 | 3 | CQRS Axon : agrégat event-sourcé, publications, projections et requêtes de statistics-service, replay | Terminée |
 | 4 | Resilience4j (Retry, RateLimiter, CircuitBreaker, TimeLimiter), fallbacks, 5 pannes (`make panne N=1..5`) | Terminée |
+| 5 | LoadBalancer : 2 instances de participant et de statistics, `make repartition`, `make replay` | Terminée |
 
 ## Prérequis
 
@@ -31,6 +32,8 @@ make up       # crée .env si besoin, construit les images, démarre et attend �
 make health   # tests de fumée
 make seed     # jeu de données de démonstration (par les API, via la Gateway)
 make panne N=1   # scénario de panne 1 à 5, rétabli automatiquement (scripts/pannes)
+make repartition # répartition de charge entre les 2 instances (Gateway, Feign, bascule)
+make replay      # replay de la projection CQRS (2 instances de statistics-service)
 make down     # arrêt (données conservées)
 ```
 

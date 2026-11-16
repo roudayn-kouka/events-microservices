@@ -106,4 +106,11 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [ ] **C59 — Fallback de la Gateway** : commande R9. Visible : 503 JSON « … indisponible (Gateway) » (à placer à côté du 500 de la phase 3).
 - [ ] **C60 — Configuration** : `config-repo/resilience-feign.yml` dans l'IDE. Visible : Retry 3 × 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s.
 
+### Répartition de charge (phase 5)
+
+- [ ] **C61 — Eureka, 2 instances** : `http://localhost:8761`. Visible : `PARTICIPANT-SERVICE` et `STATISTICS-SERVICE` avec 2 instances UP chacun.
+- [ ] **C62 — Répartition 50 / 50** : `make repartition` (parties 1 et 2). Visible : 10 / 10 pour la Gateway et pour Feign.
+- [ ] **C63 — Bascule sans erreur** : `make repartition` (partie 3). Visible : 20 requêtes sur l'instance 1 quand l'instance 2 est arrêtée.
+- [ ] **C64 — Replay à 2 instances** : `make replay`. Visible : les 4 étapes, « identique à avant », et les 2 instances UP.
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._

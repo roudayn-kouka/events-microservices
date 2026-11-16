@@ -192,6 +192,23 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Piège constaté** : supprimer le fichier puis rafraîchir ne suffit pas. Le refresh répond `[]` et la panne reste active : le client garde la source de propriétés qui a disparu côté serveur. **Parade** : écrire d'abord une **valeur neutre** (`latence-ms: 0`), rafraîchir, puis supprimer le fichier (scripts 2 à 4).
 - **Plusieurs instances** : il faut rafraîchir chacune. Spring Cloud Bus le ferait d'un seul appel, mais il demande RabbitMQ ou Kafka : écarté ici, un script suffit.
 
+## Répartition de charge (phase 5)
+
+### Q24. Comment se fait la répartition entre les deux instances ?
+
+- **Côté client** : Spring Cloud LoadBalancer, dans la Gateway (`lb://participant-service`) et dans Feign (event-service). Chaque appelant lit la liste des instances dans Eureka et choisit à tour de rôle (*round robin*). Mesuré : **50 / 50**, par la Gateway comme par Feign (`make repartition`, en-tête `X-Instance-Id`).
+- **Bascule** : une instance arrêtée reste connue quelques secondes (registre Eureka relu toutes les 5 s, cache du LoadBalancer de 5 s). La Gateway rejoue alors une **lecture** en échec sur l'autre instance (filtre `Retry`, placé *dans* le CircuitBreaker de la route), avec une connexion limitée à 2 s. Mesuré : 20 lectures sur 20 réussies pendant l'arrêt, au lieu de 3 erreurs sur 20 sans ce réglage.
+
+### Q25. Pourquoi le replay avec deux instances de statistics-service passe-t-il par l'arrêt de l'une d'elles ?
+
+- **Segments et jetons** : le processeur *tracking* « statistiques » découpe le flux d'événements en **segments** (ici, un seul). Pour traiter un segment, une instance doit en **réclamer le jeton** (*token claim*) dans `token_entry` (`db_stats`, partagée). Le jeton enregistre la position dans le flux et le propriétaire (`owner`).
+- **Une seule instance projette à un instant donné** : avec un segment, la première instance qui le réclame projette, l'autre attend. Il n'y a donc jamais de double traitement d'un événement ; les deux instances servent quand même les **requêtes** (QueryGateway, via Axon Server).
+- **Le replay** remet le jeton à zéro, ce qui exige que **personne ne le détienne**. Demandé à l'instance qui ne le détient pas, il est refusé (`UnableToClaimTokenException` : 409 explicite). `make replay` fait le plus simple : il arrête `statistics-service-2` (son arrêt propre libère le segment), rejoue sur l'instance 1 (8105), attend que les compteurs retrouvent leurs valeurs, puis redémarre l'instance 2 et vérifie les 2 instances UP dans Eureka.
+- **En production** :
+  - **plusieurs segments** (par exemple 4) répartissent la projection entre les instances : chacune traite une partie du flux, ce qui accélère aussi le replay ;
+  - **le reset piloté depuis Axon Server**, qui connaît tous les processeurs de toutes les instances : il les met en pause partout, remet les jetons à zéro, puis relance, sans arrêter de conteneur ;
+  - ou une projection reconstruite **à côté** (nouveau nom de processeur et nouvelles tables), puis une bascule quand elle a rattrapé le flux : aucune interruption des lectures.
+
 ## Sécurité (non implémentée : choix de périmètre)
 
 ### Q19. Comment sécuriseriez-vous la Gateway et les services ?

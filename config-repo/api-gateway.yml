@@ -11,6 +11,9 @@ spring:
     gateway:
       server:
         webflux:
+          httpclient:
+            # instance arrêtée : échec de connexion en 2 s (et non 14 s), puis Retry sur l'autre
+            connect-timeout: 2000
           globalcors:
             cors-configurations:
               '[/**]':
@@ -34,6 +37,16 @@ spring:
                   args:
                     name: gw-event-service
                     fallbackUri: forward:/indisponible/event-service
+                # Phase 5 : DANS le CircuitBreaker, pour rejouer avant que le fallback réponde.
+                # Une instance arrêtée reste connue quelques secondes (registre Eureka relu toutes
+                # les 5 s + cache du LoadBalancer 5 s) : une LECTURE en échec est rejouée sur
+                # l'instance suivante, la bascule est invisible. Jamais un POST.
+                - name: Retry
+                  args:
+                    retries: 2
+                    methods: GET
+                    series: SERVER_ERROR
+                    exceptions: java.io.IOException, java.util.concurrent.TimeoutException
             - id: participant-service
               uri: lb://participant-service
               predicates: [Path=/api/participants/**]
@@ -44,6 +57,16 @@ spring:
                   args:
                     name: gw-participant-service
                     fallbackUri: forward:/indisponible/participant-service
+                # Phase 5 : DANS le CircuitBreaker, pour rejouer avant que le fallback réponde.
+                # Une instance arrêtée reste connue quelques secondes (registre Eureka relu toutes
+                # les 5 s + cache du LoadBalancer 5 s) : une LECTURE en échec est rejouée sur
+                # l'instance suivante, la bascule est invisible. Jamais un POST.
+                - name: Retry
+                  args:
+                    retries: 2
+                    methods: GET
+                    series: SERVER_ERROR
+                    exceptions: java.io.IOException, java.util.concurrent.TimeoutException
             - id: logistics-service
               uri: lb://logistics-service
               predicates: [Path=/api/logistics/**]
@@ -54,6 +77,16 @@ spring:
                   args:
                     name: gw-logistics-service
                     fallbackUri: forward:/indisponible/logistics-service
+                # Phase 5 : DANS le CircuitBreaker, pour rejouer avant que le fallback réponde.
+                # Une instance arrêtée reste connue quelques secondes (registre Eureka relu toutes
+                # les 5 s + cache du LoadBalancer 5 s) : une LECTURE en échec est rejouée sur
+                # l'instance suivante, la bascule est invisible. Jamais un POST.
+                - name: Retry
+                  args:
+                    retries: 2
+                    methods: GET
+                    series: SERVER_ERROR
+                    exceptions: java.io.IOException, java.util.concurrent.TimeoutException
             - id: feedback-service
               uri: lb://feedback-service
               predicates: [Path=/api/feedback/**]
@@ -64,6 +97,16 @@ spring:
                   args:
                     name: gw-feedback-service
                     fallbackUri: forward:/indisponible/feedback-service
+                # Phase 5 : DANS le CircuitBreaker, pour rejouer avant que le fallback réponde.
+                # Une instance arrêtée reste connue quelques secondes (registre Eureka relu toutes
+                # les 5 s + cache du LoadBalancer 5 s) : une LECTURE en échec est rejouée sur
+                # l'instance suivante, la bascule est invisible. Jamais un POST.
+                - name: Retry
+                  args:
+                    retries: 2
+                    methods: GET
+                    series: SERVER_ERROR
+                    exceptions: java.io.IOException, java.util.concurrent.TimeoutException
             - id: statistics-service
               uri: lb://statistics-service
               predicates: [Path=/api/stats/**]
@@ -74,6 +117,16 @@ spring:
                   args:
                     name: gw-statistics-service
                     fallbackUri: forward:/indisponible/statistics-service
+                # Phase 5 : DANS le CircuitBreaker, pour rejouer avant que le fallback réponde.
+                # Une instance arrêtée reste connue quelques secondes (registre Eureka relu toutes
+                # les 5 s + cache du LoadBalancer 5 s) : une LECTURE en échec est rejouée sur
+                # l'instance suivante, la bascule est invisible. Jamais un POST.
+                - name: Retry
+                  args:
+                    retries: 2
+                    methods: GET
+                    series: SERVER_ERROR
+                    exceptions: java.io.IOException, java.util.concurrent.TimeoutException
 
 # CircuitBreaker de la Gateway (phase 4) : un par route. Délai large (20 s) : les services ont leurs
 # propres Retry (3 × 500 ms) et TimeLimiter (5 s) sur leurs appels Feign, qui doivent pouvoir aboutir.

@@ -80,6 +80,15 @@ for service in participant-service logistics-service event-service feedback-serv
   controle "$service : répond via la Gateway (${ROUTES[$service]})"        via_gateway "${ROUTES[$service]}"
 done
 
+# Phase 5 (LoadBalancer) : si la 2e instance tourne (profil core), 2 instances UP attendues
+deux_instances() { [[ "$(instances_up "$1")" -ge 2 ]]; }
+for service in participant-service statistics-service; do
+  if docker compose ps --services --status running 2>/dev/null | grep -qx "${service}-2"; then
+    for _ in $(seq 1 12); do deux_instances "$service" && break; sleep 5; done
+    controle "$service : 2 instances UP dans Eureka (répartition de charge)" deux_instances "$service"
+  fi
+done
+
 echo "Registre Eureka : $(apps_eureka)"
 if (( echecs == 0 )); then
   echo "Tout est opérationnel."

@@ -5,7 +5,7 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 4,,Epic,Microservices métier,"event, participant, logistics, feedback, statistics : reprise des 5 branches de l'équipe",Highest,services,,To Do
 5,,Epic,OpenFeign,Remplacement des relations JPA inter-services par des ID et des appels Feign,Highest,feign,,To Do
 6,,Epic,Résilience4j et pannes,"Retry, RateLimiter, CircuitBreaker, TimeLimiter, fallbacks, 5 types de défaillance",Highest,resilience4j,,Done
-7,,Epic,Équilibrage de charge,"Spring Cloud LoadBalancer, 2 instances, preuve de répartition",High,loadbalancer,,To Do
+7,,Epic,Équilibrage de charge,"Spring Cloud LoadBalancer, 2 instances, preuve de répartition",High,loadbalancer,,Done
 8,,Epic,CQRS Axon,"Axon Server, EventAggregate, projections et requêtes dans statistics-service (mon module)",Highest,axon;cqrs,,To Do
 9,,Epic,Observabilité,"Micrometer, Prometheus, Grafana, Zipkin, alertes",High,observability,,To Do
 10,,Epic,Documentation des API,"Swagger/OpenAPI agrégé dans la Gateway, collection Postman",High,swagger;postman,,To Do
@@ -56,7 +56,7 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 55,6,Task,Panne 3 : réponse incorrecte,"Réponse corrompue détectée, rejetée, fallback déclenché",High,pannes,1,Done
 56,6,Task,Panne 4 : erreur réseau,URL mal configurée entre services puis correction à chaud (/actuator/refresh),High,pannes,1,Done
 57,6,Task,Panne 5 : dépendance externe,Base de données inaccessible : health DOWN et circuit ouvert,High,pannes,1,Done
-58,7,Story,Deux instances et X-Instance-Id,participant-service x2 (Feign) et statistics-service x2 (Gateway) ; instance exposée dans chaque réponse,High,loadbalancer,2,To Do
+58,7,Story,Deux instances et X-Instance-Id,participant-service x2 (Feign) et statistics-service x2 (Gateway) ; instance exposée dans chaque réponse,High,loadbalancer,2,Done
 59,58,Task,Script de répartition,N requêtes et comptage par instance,Medium,loadbalancer,1,To Do
 60,9,Story,Métriques Prometheus,"actuator/prometheus sur tous les services, scraping via Eureka",High,prometheus,2,To Do
 61,9,Story,Dashboards Grafana provisionnés,"JVM, HTTP, Resilience4j (état du circuit), métriques métier",High,grafana,3,To Do

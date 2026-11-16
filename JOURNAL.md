@@ -8,6 +8,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 1 — Socle Spring Cloud | 2026-11-15 20:46 | 2026-11-15 22:10 | 1 h 24 | 1 j | Config Server, Eureka, Gateway, MySQL, Compose |
 | 2 — Services métier + Feign | 2026-11-15 22:10 | 2026-11-15 23:59 | 1 h 49 | 2 j | 5 services, 179 tests d'origine repris, `make seed` |
 | 3 — CQRS Axon | 2026-11-16 15:35 | 2026-11-16 17:10 | 1 h 35 | 2 j | agrégat, publications, projections et requêtes de statistics-service, replay |
+| 5 — LoadBalancer | 2026-11-16 21:12 | 2026-11-16 21:40 | 28 min | 0,5 j | 2 instances, 50 / 50 Gateway et Feign, bascule sans erreur, replay à 2 instances |
 | 4 — Resilience4j et pannes | 2026-11-16 19:46 | 2026-11-16 21:10 | 1 h 24 | 1 j | 4 mécanismes sur tous les appels Feign, fallbacks, Gateway 503, 5 pannes |
 
 ## Phase 3 — CQRS Axon
@@ -42,6 +43,16 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   3. `read` d'une sortie curl sans saut de ligne : `set -e` arrêtait le script ;
   4. **retour à la normale à chaud inopérant** (le refresh gardait la source supprimée) : valeur neutre avant la suppression (THEORIE Q23).
 - **Vérifié** : 334 tests verts ; les 5 pannes jouées en réel ; Newman 64 requêtes, 0 échec ; `make health` vert ; la Gateway répond 503 JSON au lieu de 500.
+
+## Phase 5 — LoadBalancer
+
+- **Début** : 2026-11-16 21:12 — **fin** : 21:40 — **durée réelle** : 28 min — estimation : 0,5 j.
+- **Fait** : `participant-service-2` et `statistics-service-2` (profil core) ; contrôle « 2 instances UP » dans `make health` ; `make repartition` ; `make replay`.
+- **Problèmes et corrections** :
+  1. 3 requêtes sur 20 en 503 pendant une bascule. Il y avait deux causes : un Retry placé avant le CircuitBreaker (la réponse du fallback était déjà envoyée), et une connexion de 14 s vers l'instance arrêtée. Correction : Retry des GET dans le CircuitBreaker de chaque route, et connexion à 2 s ; résultat, 0 erreur ;
+  2. un replay sur l'instance sans jeton donnait un 500 (`UnableToClaimTokenException`) : refus 409 explicite, et `make replay` (arrêt de l'instance 2, reset sur 8105), comme tu l'as demandé ;
+  3. le replay de Postman passe par la Gateway : il accepte 202 ou 409.
+- **Vérifié** : 336 tests verts ; 50 / 50 mesuré ; `make health` vert ; Newman 0 échec (deux exécutions).
 
 ## Périmètre révisé (2026-11-16, à la demande)
 
