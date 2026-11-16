@@ -202,8 +202,8 @@ services:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8104/actuator/health | grep -q '\"status\":\"UP\"'"]
 
-  # Mon module. VERSION AVANT CQRS : aucune base, lit les 4 services métier par Feign.
-  # db_stats (projections Axon) arrive à la phase 3, la 2e instance (8115) à la phase 5.
+  # Mon module, côté requêtes CQRS : projections Axon dans db_stats (stats.source=feign : AVANT CQRS).
+  # La 2e instance (8115) arrive à la phase 5 (LoadBalancer).
   statistics-service:
     <<: *spring-service
     build: ./statistics-service
@@ -212,6 +212,9 @@ services:
     environment:
       <<: *spring-env
       INSTANCE_ID: statistics-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      STATS_DB_PASSWORD: ${STATS_DB_PASSWORD}
     ports: ["8105:8105"]
     depends_on: *depends-socle
     healthcheck:

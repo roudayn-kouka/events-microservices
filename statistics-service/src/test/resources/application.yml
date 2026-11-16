@@ -1,10 +1,33 @@
-# Tests : ni Config Server ni Eureka ; aucune base (version AVANT CQRS)
+# Tests : ni Config Server ni Eureka ; H2 pour db_stats ; Axon sans Axon Server (bus local,
+# event store JPA sur H2) et même sérialiseur qu'en production
 spring:
   application:
     name: statistics-service
   cloud:
     config:
       enabled: false
+  datasource:
+    url: jdbc:h2:mem:stats;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+axon:
+  axonserver:
+    enabled: false
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
+  eventhandling:
+    processors:
+      statistiques:
+        mode: tracking
 eureka:
   client:
     enabled: false
