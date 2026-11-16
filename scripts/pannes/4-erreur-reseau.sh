@@ -3,7 +3,7 @@
 # participant-service (hôte inexistant), puis corrigé à chaud (/actuator/refresh), sans redémarrage.
 # Attendu : vraie erreur réseau (hôte inconnu) → Retry 3 fois → fallback « injoignable ».
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
-restaurer() { [[ -f config-overrides/event-service.yml ]] && retirer_surcharge event-service "$EVENT_ACTUATOR" "events:
+restaurer() { [[ -f config-overrides/event-service.yml ]] && retirer_surcharge event-service "events:
   clients:
     participant-service:
       url-forcee: ''" || true; }
@@ -14,7 +14,7 @@ prerequis
 appel GET "/events/$EV/details"
 
 etape "Mauvaise URL posée à chaud"
-surcharger event-service "$EVENT_ACTUATOR" "events:
+surcharger event-service "events:
   clients:
     participant-service:
       url-forcee: http://participant-introuvable:8102"
@@ -25,7 +25,7 @@ appel GET "/events/$EV/details"
 etat_circuit "$EVENT_ACTUATOR" participant-service
 
 etape "Correction à chaud : la surcharge est retirée, puis /actuator/refresh"
-retirer_surcharge event-service "$EVENT_ACTUATOR" "events:
+retirer_surcharge event-service "events:
   clients:
     participant-service:
       url-forcee: ''"

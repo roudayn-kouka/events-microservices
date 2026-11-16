@@ -3,7 +3,7 @@
 # (config-overrides/participant-service.yml + /actuator/refresh, sans redémarrage).
 # Attendu : le TimeLimiter (5 s) d'event-service abandonne l'appel → fallback 504 explicite.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
-restaurer() { [[ -f config-overrides/participant-service.yml ]] && retirer_surcharge participant-service "$PARTICIPANT_ACTUATOR" "panne:
+restaurer() { [[ -f config-overrides/participant-service.yml ]] && retirer_surcharge participant-service "panne:
   latence-ms: 0" || true; }
 trap restaurer EXIT
 
@@ -12,7 +12,7 @@ prerequis
 appel POST "/events/$EV/participants/$PART"
 
 etape "Latence activée à chaud par le Config Server"
-surcharger participant-service "$PARTICIPANT_ACTUATOR" "panne:
+surcharger participant-service "panne:
   latence-ms: 7000"
 
 etape "Inscription : sa vérification (GET) dépasse 5 s à chaque tentative → 504"
@@ -22,7 +22,7 @@ appel GET "/events/$EV/details"
 etat_circuit "$EVENT_ACTUATOR" participant-service
 
 etape "Retour à la normale, à chaud"
-retirer_surcharge participant-service "$PARTICIPANT_ACTUATOR" "panne:
+retirer_surcharge participant-service "panne:
   latence-ms: 0"
 trap - EXIT
 sleep 10   # si le circuit s'est ouvert (appels lents), fin de la période OPEN
