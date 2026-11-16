@@ -23,6 +23,19 @@ spring:
           default-filters:
             # Évite les en-têtes CORS en double si un service en ajoute aussi
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+            # Phase 5 : une instance arrêtée reste connue de la Gateway quelques secondes (registre
+            # Eureka relu toutes les 5 s + cache du LoadBalancer 5 s). Une LECTURE en échec est
+            # rejouée sur l'instance suivante : la bascule est invisible pour le client. Jamais un POST.
+            - name: Retry
+              args:
+                retries: 2
+                methods: GET
+                series: SERVER_ERROR
+                exceptions: java.io.IOException, java.util.concurrent.TimeoutException
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
+                  factor: 2
           routes:
             - id: event-service
               uri: lb://event-service
