@@ -84,6 +84,11 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- Documentation OpenAPI (phase 7) : /v3/api-docs, agrégée dans la Gateway -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
         <!-- Observabilité (phase 6) : traces Micrometer Tracing (Brave) envoyées à Zipkin -->
         <dependency>
             <groupId>io.micrometer</groupId>

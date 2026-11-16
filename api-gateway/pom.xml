@@ -45,6 +45,11 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- Swagger agrégé (phase 7) : une seule page, sélecteur des 5 services -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+        </dependency>
         <!-- Observabilité (phase 6) : traces Micrometer Tracing (Brave) envoyées à Zipkin -->
         <dependency>
             <groupId>io.micrometer</groupId>
