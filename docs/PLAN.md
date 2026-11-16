@@ -220,6 +220,13 @@ Je vérifierai le dernier correctif exact de chaque ligne au début de la phase 
 
 ## 7. Phases
 
+> **Périmètre révisé le 2026-11-16** (décision de l'utilisatrice, pour viser l'efficacité par rapport à la grille, où l'Excellence est plafonnée à 3 points) :
+> phases 3 à 7 inchangées ; **phase 8 Keycloak retirée** (tickets « Won't Do », sécurisation expliquée dans THEORIE Q19) ;
+> phase 9 Angular **allégée** (0,5 à 1 j : écrans feedback, participant et logistique branchés sur la Gateway, dashboard statistiques avec graphiques, sans connexion) ;
+> phase 10 en un seul commit (seuil JaCoCo bloquant) ; phase 11 avec arrêt avant toute action sur `~/devops` ;
+> phase 12 limitée à 0,5 j (Terraform EC2 + script + runbook, validés sans `apply`) ; phase 13 inchangée.
+> Le suivi réel (heures, durées) est dans `JOURNAL.md`.
+
 Chaque phase se fait sur une branche `feature/<phase>`, fusionnée en local dans `develop`, avec des commits conventionnels qui citent la clé JIRA. Une version est taguée après les phases 6, 10 et 13. Durées estimées en temps de travail effectif.
 
 | # | Phase | Critère de fin (vérifié en local) | Durée | Grille |

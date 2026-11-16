@@ -9,7 +9,7 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 8,,Epic,CQRS Axon,"Axon Server, EventAggregate, projections et requêtes dans statistics-service (mon module)",Highest,axon;cqrs,,To Do
 9,,Epic,Observabilité,"Micrometer, Prometheus, Grafana, Zipkin, alertes",High,observability,,To Do
 10,,Epic,Documentation des API,"Swagger/OpenAPI agrégé dans la Gateway, collection Postman",High,swagger;postman,,To Do
-11,,Epic,Sécurité Keycloak,"Realm events, rôles ADMIN/USER, Gateway resource server, propagation du JWT",Medium,keycloak;security,,To Do
+11,,Epic,Sécurité Keycloak,"Realm events, rôles ADMIN/USER, Gateway resource server, propagation du JWT — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak;security,,Won't Do
 12,,Epic,Frontend Angular,"Frontend de feature/feedback étendu : participants, logistique, dashboard statistiques, Keycloak",Medium,angular,,To Do
 13,,Epic,Qualité,"Handler global, validation, tests WireMock et AggregateTestFixture, JaCoCo >= 70 % sur statistics",High,quality;tests,,To Do
 14,,Epic,CI/CD Jenkins,"Jenkinsfile multi-services, SonarQube et quality gate, Trivy, Docker, paramètres PUSH_IMAGES et DEPLOY_AWS",Medium,jenkins;sonarqube;trivy,,To Do
@@ -64,9 +64,9 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 63,9,Task,Alertes Prometheus,"Service down, circuit OPEN, latence p95 élevée",Medium,prometheus,1,To Do
 64,10,Story,Swagger agrégé,"OpenAPI par service, sélecteur dans la Gateway",High,swagger,2,To Do
 65,10,Story,Collection Postman,Tous les endpoints et scénarios de panne ; environnements local et AWS,High,postman,2,To Do
-66,11,Story,Realm Keycloak,"Realm events exporté et importé au démarrage, rôles ADMIN/USER",Medium,keycloak,2,To Do
-67,11,Story,Gateway resource server,"Validation JWT, règles par rôle",Medium,keycloak,2,To Do
-68,11,Task,Propagation du JWT,Relais du jeton par la Gateway et par Feign,Medium,keycloak;feign,1,To Do
+66,11,Story,Realm Keycloak,"Realm events exporté et importé au démarrage, rôles ADMIN/USER — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak,2,Won't Do
+67,11,Story,Gateway resource server,"Validation JWT, règles par rôle — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak,2,Won't Do
+68,11,Task,Propagation du JWT,Relais du jeton par la Gateway et par Feign — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19),Medium,keycloak;feign,1,Won't Do
 69,12,Story,Écrans participants et logistique,"Base Angular 20 de feature/feedback, écrans des autres features",Medium,angular,3,To Do
 70,12,Story,Dashboard statistiques,Graphiques alimentés par statistics-service (mon module),High,angular;statistics,3,To Do
 71,12,Task,Connexion Keycloak côté Angular,"Connexion, jeton envoyé à la Gateway, menus selon le rôle",Medium,angular;keycloak,2,To Do

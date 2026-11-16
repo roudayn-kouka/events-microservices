@@ -20,7 +20,7 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 13 | LoadBalancer | Répartition prouvée | _phase 5_ |
 | 14 | Observabilité | Prometheus, Grafana (circuit breaker), Zipkin | _phase 6_ |
 | 15 | Swagger et Postman | API agrégées, collection | _phase 7_ |
-| 16 | Keycloak | Realm, rôles, JWT | _phase 8_ |
+| 16 | Sécurité (non implémentée, choix de périmètre) | Comment on sécuriserait la Gateway : OAuth2 / JWT (THEORIE Q19) | — |
 | 17 | Angular | Écrans, **dashboard statistiques** | _phase 9_ |
 | 18 | Qualité | Tests, JaCoCo ≥ 70 % sur statistics | _phase 10_ |
 | 19 | Jenkins, SonarQube, Trivy | Pipeline multi-services | _phase 11_ |
