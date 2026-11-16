@@ -6,13 +6,22 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.axonframework.eventhandling.gateway.EventGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tn.fst.events.api.logistics.LogisticsEvents.LogisticsCreated;
+import tn.fst.events.api.logistics.LogisticsEvents.LogisticsDeleted;
+import tn.fst.events.api.logistics.LogisticsEvents.LogisticsUpdated;
 import tn.fst.events.logistics.entities.Logistics;
 import tn.fst.events.logistics.repositories.LogisticsRepository;
 
-/** Repris de feature/logistics ; « introuvable » donne 404 (et non 500), plus le lot et le coût réservé. */
+/**
+ * Repris de feature/logistics ; « introuvable » donne 404 (et non 500), plus le lot et le coût réservé.
+ * Phase 3 (CQRS) : chaque écriture publie son événement dans Axon, dans la transaction (avant le
+ * commit). LogisticsUpdated porte l'état complet, réservation comprise.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -20,20 +29,31 @@ import tn.fst.events.logistics.repositories.LogisticsRepository;
 public class LogisticsServiceImpl implements ILogisticsService {
 
     LogisticsRepository logisticsRepository;
+    EventGateway eventGateway;
 
     @Override
+    @Transactional
     public Logistics addLogistics(Logistics logistics) {
-        return logisticsRepository.save(logistics);
+        Logistics creee = logisticsRepository.save(logistics);
+        eventGateway.publish(new LogisticsCreated(creee.getIdLog(), creee.getDescription(), creee.isReserve(),
+                creee.getPrixUnit(), creee.getQuantite()));
+        return creee;
     }
 
     @Override
+    @Transactional
     public Logistics updateLogistics(Logistics logistics) {
-        return logisticsRepository.save(logistics); // save() fait un update si l'id existe
+        Logistics l = logisticsRepository.save(logistics); // save() fait un update si l'id existe
+        eventGateway.publish(new LogisticsUpdated(l.getIdLog(), l.getDescription(), l.isReserve(), l.getPrixUnit(),
+                l.getQuantite()));
+        return l;
     }
 
     @Override
+    @Transactional
     public void deleteLogistics(int idLog) {
         logisticsRepository.deleteById(idLog);
+        eventGateway.publish(new LogisticsDeleted(idLog));
     }
 
     /**

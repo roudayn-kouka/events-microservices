@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.axonframework.eventhandling.gateway.EventGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,6 +34,9 @@ class ParticipantServicesImplMockitoTest {
 
     @Mock
     private ParticipantRepository participantRepository;
+
+    @Mock
+    private EventGateway eventGateway;
 
     @InjectMocks
     private ParticipantServicesImpl service;
@@ -140,5 +144,47 @@ class ParticipantServicesImplMockitoTest {
         when(participantRepository.findByNomAndPrenomAndTache("Tounsi", "Ahmed", Tache.ORGANISATEUR))
                 .thenReturn(List.of(p));
         assertEquals(List.of(p), service.search("Tounsi", "Ahmed", Tache.ORGANISATEUR));
+    }
+
+    // ---------------------------------------------------------------- ajoutés (phase 3, CQRS)
+
+    @Test
+    void creationPublieParticipantCreated() {
+        Participant p = buildParticipant("Tounsi", "Ahmed", Tache.ORGANISATEUR);
+        Participant cree = buildParticipant("Tounsi", "Ahmed", Tache.ORGANISATEUR);
+        cree.setIdPart(7);
+        when(participantRepository.save(p)).thenReturn(cree);
+
+        service.addParticipant(p);
+
+        org.mockito.Mockito.verify(eventGateway).publish(
+                new tn.fst.events.api.participant.ParticipantEvents.ParticipantCreated(7, "Tounsi", "Ahmed", "ORGANISATEUR"));
+    }
+
+    @Test
+    void changementDeTachePublieParticipantUpdated() {
+        Participant existant = buildParticipant("Ben Salah", "Amira", Tache.INVITE);
+        existant.setIdPart(3);
+        when(participantRepository.findById(3)).thenReturn(Optional.of(existant));
+        when(participantRepository.save(existant)).thenReturn(existant);
+
+        service.changeTache(3, Tache.ANIMATEUR);
+
+        org.mockito.Mockito.verify(eventGateway).publish(
+                new tn.fst.events.api.participant.ParticipantEvents.ParticipantUpdated(3, "Ben Salah", "Amira", "ANIMATEUR"));
+    }
+
+    @Test
+    void suppressionPublieParticipantDeletedEtRienSiIntrouvable() {
+        Participant existant = buildParticipant("X", "Y", Tache.SERVEUR);
+        existant.setIdPart(4);
+        when(participantRepository.findById(4)).thenReturn(Optional.of(existant));
+
+        service.deleteParticipant(4);
+        assertThrows(ResponseStatusException.class, () -> service.deleteParticipant(5));
+
+        org.mockito.Mockito.verify(eventGateway).publish(
+                new tn.fst.events.api.participant.ParticipantEvents.ParticipantDeleted(4));
+        org.mockito.Mockito.verifyNoMoreInteractions(eventGateway);
     }
 }

@@ -59,13 +59,14 @@ class FeedbackServiceTest {
     @Mock FeedbackRepository feedbackRepository;
     @Mock EventClient eventClient;
     @Mock ParticipantClient participantClient;
+    @Mock org.axonframework.eventhandling.gateway.EventGateway eventGateway;
     FeedbackService service;
     final Clock clock = Clock.fixed(Instant.parse("2026-10-27T12:00:00Z"), ZoneId.of("Africa/Tunis"));
     LocalDate hier;
 
     @BeforeEach
     void setup() {
-        service = new FeedbackService(feedbackRepository, eventClient, participantClient, clock);
+        service = new FeedbackService(feedbackRepository, eventClient, participantClient, eventGateway, clock);
         hier = LocalDate.now(clock).minusDays(1);
     }
 
@@ -242,9 +243,9 @@ class FeedbackServiceTest {
     void inclusiveEndDateChangesAtLocalMidnight() {
         eligible(LocalDate.of(2026, 10, 26), Set.of(2));
         Clock boundary = Clock.fixed(Instant.parse("2026-10-26T23:00:00Z"), ZoneId.of("Africa/Tunis"));
-        FeedbackService atMidnight = new FeedbackService(feedbackRepository, eventClient, participantClient, boundary);
+        FeedbackService atMidnight = new FeedbackService(feedbackRepository, eventClient, participantClient, eventGateway, boundary);
         FeedbackService beforeMidnight = new FeedbackService(feedbackRepository, eventClient,
-                participantClient, Clock.offset(boundary, Duration.ofNanos(-1)));
+                participantClient, eventGateway, Clock.offset(boundary, Duration.ofNanos(-1)));
         assertStatus(HttpStatus.BAD_REQUEST, () -> beforeMidnight.createFeedback(EV, 2, 5, null));
         when(feedbackRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
         assertEquals(boundary.instant(), atMidnight.createFeedback(EV, 2, 5, null).getDate());
@@ -284,5 +285,43 @@ class FeedbackServiceTest {
         service.getFeedbackByEvent(EV);
         verify(eventClient).getEvent(EV);
         verifyNoInteractions(participantClient);
+    }
+
+    // ---------------------------------------------------------------- ajoutés (phase 3, CQRS)
+
+    @Test
+    void unAvisEnregistrePublieFeedbackSubmitted() {
+        eligible();
+        when(feedbackRepository.saveAndFlush(any())).thenAnswer(invocation -> {
+            Feedback f = invocation.getArgument(0);
+            f.setId(11);
+            return f;
+        });
+
+        service.createFeedback(EV, 2, 4, "Bien");
+
+        verify(eventGateway).publish(new tn.fst.events.api.feedback.FeedbackEvents.FeedbackSubmitted(
+                11, EV, 2, 4, clock.instant()));
+    }
+
+    @Test
+    void unAvisRefuseNePublieRien() {
+        eligible();
+        when(feedbackRepository.existsByEventIdAndParticipantId(EV, 2)).thenReturn(true);
+
+        assertStatus(HttpStatus.CONFLICT, () -> service.createFeedback(EV, 2, 5, null));
+
+        verifyNoInteractions(eventGateway);
+    }
+
+    @Test
+    void uneSuppressionPublieFeedbackDeleted() {
+        Feedback feedback = new Feedback();
+        feedback.setEventId(EV);
+        when(feedbackRepository.findById(3)).thenReturn(java.util.Optional.of(feedback));
+
+        service.deleteFeedback(3);
+
+        verify(eventGateway).publish(new tn.fst.events.api.feedback.FeedbackEvents.FeedbackDeleted(3, EV));
     }
 }

@@ -21,6 +21,10 @@ import tn.fst.events.participant.entities.Tache;
 @Import(ParticipantServicesImpl.class)
 class ParticipantServicesImplIntegrationTest {
 
+    /** Phase 3 : la tranche JPA ne charge pas Axon ; la publication est simulée. */
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private org.axonframework.eventhandling.gateway.EventGateway eventGateway;
+
     @Autowired
     private ParticipantServicesImpl service;
 

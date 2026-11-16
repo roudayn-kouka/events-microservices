@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import org.axonframework.eventhandling.gateway.EventGateway;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tn.fst.events.api.feedback.FeedbackEvents.FeedbackDeleted;
+import tn.fst.events.api.feedback.FeedbackEvents.FeedbackSubmitted;
 import tn.fst.events.feedback.clients.EventClient;
 import tn.fst.events.feedback.clients.EventDTO;
 import tn.fst.events.feedback.clients.ParticipantClient;
@@ -27,6 +30,8 @@ import tn.fst.events.feedback.repositories.FeedbackRepository;
  * Changements : EventRepository et ParticipantRepository (autres bases) deviennent des appels
  * OpenFeign ; « participant associé » se lit dans les inscrits de l'événement (participantIds),
  * car c'est désormais event-service qui porte l'inscription.
+ * Phase 3 (CQRS) : un avis enregistré ou supprimé est publié dans Axon (FeedbackSubmitted,
+ * FeedbackDeleted), dans la transaction, pour la note moyenne de statistics-service.
  */
 @Service
 @Transactional(readOnly = true)
@@ -35,21 +40,23 @@ public class FeedbackService {
     private final FeedbackRepository feedbackRepository;
     private final EventClient eventClient;
     private final ParticipantClient participantClient;
+    private final EventGateway eventGateway;
     private final Clock clock;
 
     /** Fuseau de la règle « événement terminé » : réglable (Config Server), Africa/Tunis par défaut. */
     @Autowired
     public FeedbackService(FeedbackRepository feedbackRepository, EventClient eventClient,
-                           ParticipantClient participantClient,
+                           ParticipantClient participantClient, EventGateway eventGateway,
                            @Value("${feedback.fuseau-horaire:Africa/Tunis}") String fuseauHoraire) {
-        this(feedbackRepository, eventClient, participantClient, Clock.system(ZoneId.of(fuseauHoraire)));
+        this(feedbackRepository, eventClient, participantClient, eventGateway, Clock.system(ZoneId.of(fuseauHoraire)));
     }
 
     public FeedbackService(FeedbackRepository feedbackRepository, EventClient eventClient,
-                           ParticipantClient participantClient, Clock clock) {
+                           ParticipantClient participantClient, EventGateway eventGateway, Clock clock) {
         this.feedbackRepository = feedbackRepository;
         this.eventClient = eventClient;
         this.participantClient = participantClient;
+        this.eventGateway = eventGateway;
         this.clock = clock;
     }
 
@@ -62,7 +69,10 @@ public class FeedbackService {
         if (feedbackRepository.existsByEventIdAndParticipantId(eventId, participantId)) {
             throw duplicateFeedback();
         }
-        return saveFeedback(eventId, participantId, note, commentaire);
+        Feedback enregistre = saveFeedback(eventId, participantId, note, commentaire);
+        eventGateway.publish(new FeedbackSubmitted(enregistre.getId(), enregistre.getEventId(),
+                enregistre.getParticipantId(), enregistre.getNote(), enregistre.getDate()));
+        return enregistre;
     }
 
     public List<Feedback> getFeedbackByEvent(String eventId) {
@@ -86,6 +96,7 @@ public class FeedbackService {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Feedback not found"));
         feedbackRepository.delete(feedback);
+        eventGateway.publish(new FeedbackDeleted(feedbackId, feedback.getEventId()));
     }
 
     // ------------------------------------------------------------------ règles

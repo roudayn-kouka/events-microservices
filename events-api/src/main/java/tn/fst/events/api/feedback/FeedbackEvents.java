@@ -8,9 +8,9 @@ public final class FeedbackEvents {
     private FeedbackEvents() {
     }
 
-    public record FeedbackSubmitted(int id, String eventId, int participantId, int note, Instant date) {
+    public record FeedbackSubmitted(Integer id, String eventId, Integer participantId, Integer note, Instant date) {
     }
 
-    public record FeedbackDeleted(int id, String eventId) {
+    public record FeedbackDeleted(Integer id, String eventId) {
     }
 }

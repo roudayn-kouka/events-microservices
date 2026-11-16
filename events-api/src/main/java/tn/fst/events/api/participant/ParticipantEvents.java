@@ -10,13 +10,14 @@ public final class ParticipantEvents {
     private ParticipantEvents() {
     }
 
-    /** tache : INVITE, ORGANISATEUR, SERVEUR ou ANIMATEUR (texte : le contrat ne dépend d'aucune énumération). */
-    public record ParticipantCreated(int idPart, String nom, String prenom, String tache) {
+    /** Identifiants en Integer, comme les entités JPA (aucun déballage possible de null).
+     *  tache : INVITE, ORGANISATEUR, SERVEUR ou ANIMATEUR (texte : le contrat ne dépend d'aucune énumération). */
+    public record ParticipantCreated(Integer idPart, String nom, String prenom, String tache) {
     }
 
-    public record ParticipantUpdated(int idPart, String nom, String prenom, String tache) {
+    public record ParticipantUpdated(Integer idPart, String nom, String prenom, String tache) {
     }
 
-    public record ParticipantDeleted(int idPart) {
+    public record ParticipantDeleted(Integer idPart) {
     }
 }
