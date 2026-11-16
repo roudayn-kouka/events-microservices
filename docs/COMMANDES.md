@@ -235,7 +235,16 @@ Variables utiles : `S=http://localhost:8088/api/stats`. `$EV` est l'UUID d'un é
 | D9 | `docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable scripts/*.sh` | Analyse des scripts shell | Aucun avertissement |
 
 ## Prometheus · Grafana · Zipkin
-_Phase 6._
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| O1 | `make up` puis `make health` | Pile complète avec l'observabilité (profil core) | `Prometheus prêt`, `au moins 8 cibles UP`, `Grafana`, `Zipkin` |
+| O2 | `curl -s localhost:9091/api/v1/targets \| jq -r '.data.activeTargets[] \| "\(.labels.job) \(.labels.instance) \(.health)"' \| sort` | Cibles découvertes par Eureka | 11 cibles `up`, dont les 2 instances de participant et de statistics |
+| O3 | http://localhost:3001 → dossier « Events FST » | Tableaux de bord Grafana | JVM et HTTP, Resilience4j, Métier |
+| O4 | `make panne N=1` pendant que le tableau de bord Resilience4j est ouvert | Circuit visible en direct | « Circuits ouverts » à 1, puis HALF_OPEN et retour à 0 |
+| O5 | `curl -s localhost:8088/api/events/$EV/details >/dev/null; sleep 3; curl -s 'localhost:9411/api/v2/traces?serviceName=api-gateway&limit=1' \| jq -c '.[0] \| {spans: length, services: ([.[].localEndpoint.serviceName] \| unique)}'` | Trace de bout en bout | 7 spans : api-gateway, event-service, participant-service, logistics-service |
+| O6 | `docker compose logs event-service --tail 5` | traceId et spanId dans les logs | `[<traceId>-<spanId>]` sur chaque ligne d'une requête |
+| O7 | `docker compose stop participant-service participant-service-2`, 6 appels à `/details`, puis `curl -s localhost:9091/api/v1/alerts \| jq -c '[.data.alerts[] \| {alerte: .labels.alertname, etat: .state}]'` ; enfin `docker compose --profile core start participant-service participant-service-2` | Alertes | `CircuitOuvert` « firing », `InstanceInjoignable` « pending » puis « firing » |
+| O8 | `python3 docker/grafana/generate_dashboards.py` | Régénérer les tableaux de bord | 3 fichiers JSON dans `docker/grafana/dashboards` |
 
 ## Swagger · Postman
 _Phase 7._

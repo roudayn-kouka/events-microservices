@@ -113,4 +113,14 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [ ] **C63 — Bascule sans erreur** : `make repartition` (partie 3). Visible : 20 requêtes sur l'instance 1 quand l'instance 2 est arrêtée.
 - [ ] **C64 — Replay à 2 instances** : `make replay`. Visible : les 4 étapes, « identique à avant », et les 2 instances UP.
 
+### Observabilité (phase 6)
+
+- [ ] **C65 — Cibles Prometheus** : http://localhost:9091/targets. Visible : les cibles découvertes par Eureka, toutes UP, dont les 2es instances.
+- [ ] **C66 — Grafana, JVM et HTTP** : tableau de bord « Events — JVM et HTTP ». Visible : instances UP, débit, p95, mémoire par instance.
+- [ ] **C67 — Grafana, Resilience4j pendant une panne** : lancer `make panne N=1`. Visible : « Circuits ouverts » à 1, la courbe OPEN puis HALF_OPEN, les appels refusés.
+- [ ] **C68 — Grafana, métier et répartition** : « Events — Métier (statistics-service) ». Visible : indicateurs de mon module, et requêtes réparties entre les 2 instances.
+- [ ] **C69 — Trace Zipkin** : http://localhost:9411, rechercher `api-gateway`, ouvrir la trace de `/api/events/{id}/details`. Visible : gateway → event-service → participant-service et logistics-service.
+- [ ] **C70 — traceId dans les logs** : commande O6. Visible : le même traceId que dans Zipkin.
+- [ ] **C71 — Alertes** : http://localhost:9091/alerts pendant la commande O7. Visible : `CircuitOuvert` « firing ».
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._
