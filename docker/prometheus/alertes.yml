@@ -26,12 +26,13 @@ groups:
 
   - name: events-resilience
     rules:
+      # OPEN, puis HALF_OPEN au bout de 10 s : l'alerte dure tant que le circuit n'est pas refermé
       - alert: CircuitOuvert
-        expr: resilience4j_circuitbreaker_state{state="open"} == 1
+        expr: max by (application, name, state) (resilience4j_circuitbreaker_state{state=~"open|half_open"}) == 1
         for: 0s
         labels: {severite: majeure}
         annotations:
-          resume: "{{ $labels.application }} : circuit « {{ $labels.name }} » OUVERT (appels refusés)"
+          resume: "{{ $labels.application }} : circuit « {{ $labels.name }} » {{ $labels.state }} (service appelé en panne)"
 
   - name: events-performance
     rules:
@@ -42,7 +43,7 @@ groups:
         for: 1m
         labels: {severite: mineure}
         annotations:
-          resume: "{{ $labels.application }} : 95 % des requêtes en moins de {{ $value | humanizeDuration }} (seuil 2 s)"
+          resume: "{{ $labels.application }} : latence p95 de {{ $value | humanizeDuration }} (seuil 2 s)"
 
       - alert: Erreurs5xx
         expr: >
