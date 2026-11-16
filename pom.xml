@@ -29,6 +29,8 @@
         <module>api-gateway</module>
         <!-- Briques web partagées (erreurs JSON, X-Instance-Id) -->
         <module>common</module>
+        <!-- Contrats des événements Axon partagés (phase 3, CQRS) -->
+        <module>events-api</module>
         <!-- Services métier (phase 2) -->
         <module>participant-service</module>
         <module>logistics-service</module>
@@ -53,6 +55,11 @@
             <dependency>
                 <groupId>tn.fst.events</groupId>
                 <artifactId>common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>tn.fst.events</groupId>
+                <artifactId>events-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
