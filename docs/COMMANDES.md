@@ -208,7 +208,7 @@ Variables utiles : `S=http://localhost:8088/api/stats`. `$EV` est l'UUID d'un é
 | R7 | `curl -s localhost:8101/actuator/circuitbreakerevents \| jq -c '.circuitBreakerEvents[] \| {circuitBreakerName, type, creationTime}' \| tail` | Historique des transitions | `STATE_TRANSITION` CLOSED_TO_OPEN, OPEN_TO_HALF_OPEN, HALF_OPEN_TO_CLOSED |
 | R8 | `curl -s localhost:8101/actuator/health \| jq .components.circuitBreakers` | Santé des circuits | détails par circuit ; le service reste UP (`allow-health-indicator-to-fail: false`) |
 | R9 | `docker compose stop logistics-service; curl -s localhost:8088/api/logistics \| jq -c; docker compose --profile core start logistics-service` | Fallback de la Gateway | 503 « logistics-service indisponible (Gateway) : … » |
-| R10 | `seq 30 \| xargs -P 30 -I{} curl -s -o /dev/null -w '%{http_code}\n' localhost:8088/api/events/$EV/details \| sort \| uniq -c` | RateLimiter (5/s vers participant-service) | des 200 ; au-delà de 1 s d'attente, les appels en trop sont refusés par le RateLimiter (vue dégradée) |
+| R10 | `seq 30 \| xargs -P 30 -I{} sh -c "curl -s localhost:8088/api/events/$EV/details \| jq -r '(.avertissements // [] \| if length==0 then \"complet\" else .[0] end)'" \| sort \| uniq -c` | RateLimiter (5/s vers participant-service) : 30 lectures simultanées | mesuré : 11 « complet », 19 dégradées « trop d'appels (RateLimiter : 5 par 1000 ms) », toutes en HTTP 200 |
 
 ## LoadBalancer
 _Phase 5._
