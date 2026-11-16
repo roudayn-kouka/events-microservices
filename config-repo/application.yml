@@ -19,6 +19,10 @@ eureka:
     lease-expiration-duration-in-seconds: 15
 
 spring:
+  datasource:
+    hikari:
+      # base inaccessible : échec en 3 s au lieu de 30 s (panne 5, fail fast)
+      connection-timeout: 3000
   cloud:
     loadbalancer:
       cache:
