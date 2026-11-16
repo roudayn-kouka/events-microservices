@@ -59,12 +59,32 @@ public class ClientsResilients implements BeanPostProcessor {
     private final ObjectProvider<RetryRegistry> retries;
     private final ObjectProvider<RateLimiterRegistry> rateLimiters;
     private final ObjectProvider<TimeLimiterRegistry> timeLimiters;
-    /** Threads du TimeLimiter : l'appel s'exécute à part pour pouvoir l'abandonner au bout du délai. */
-    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
+    /**
+     * Threads du TimeLimiter : l'appel s'exécute à part pour pouvoir l'abandonner au bout du délai.
+     * Phase 6 : si context-propagation est présent (Micrometer Tracing), le contexte de l'appelant
+     * (trace en cours) est recopié dans ce thread ; sinon la trace Zipkin serait coupée avant Feign.
+     */
+    private final ExecutorService executor = avecContexte(Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "feign-timelimiter");
         t.setDaemon(true);
         return t;
-    });
+    }));
+
+    private static ExecutorService avecContexte(ExecutorService executor) {
+        if (!org.springframework.util.ClassUtils.isPresent("io.micrometer.context.ContextExecutorService",
+                ClientsResilients.class.getClassLoader())) {
+            return executor;
+        }
+        return Propagation.envelopper(executor);
+    }
+
+    /** Isolé dans une classe à part : chargé seulement si context-propagation est sur le classpath. */
+    private static final class Propagation {
+        static ExecutorService envelopper(ExecutorService executor) {
+            io.micrometer.context.ContextSnapshotFactory instantanes = io.micrometer.context.ContextSnapshotFactory.builder().build();
+            return io.micrometer.context.ContextExecutorService.wrap(executor, instantanes::captureAll);
+        }
+    }
 
     public ClientsResilients(ObjectProvider<CircuitBreakerRegistry> circuitBreakers, ObjectProvider<RetryRegistry> retries,
                              ObjectProvider<RateLimiterRegistry> rateLimiters, ObjectProvider<TimeLimiterRegistry> timeLimiters) {

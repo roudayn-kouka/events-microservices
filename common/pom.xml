@@ -36,6 +36,12 @@
             <artifactId>resilience4j-spring-boot3</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Phase 6 : transmettre le contexte de trace au thread du TimeLimiter -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>context-propagation</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

@@ -1,0 +1,38 @@
+# =============================================================================
+#  Prometheus (phase 6) : découvre les instances PAR EUREKA, sans liste à maintenir.
+#  Une 2e instance (phase 5) ou un service ajouté est scrappé dès son enregistrement.
+#  UI : http://localhost:9091  (alertes : /alerts, cibles : /targets)
+# =============================================================================
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+rule_files:
+  - /etc/prometheus/alertes.yml
+
+scrape_configs:
+  # Toutes les applications enregistrées dans Eureka (Gateway, Config Server, 5 services, 2es instances)
+  - job_name: services
+    metrics_path: /actuator/prometheus
+    eureka_sd_configs:
+      - server: http://eureka-server:8761/eureka
+        refresh_interval: 10s
+    relabel_configs:
+      # application Eureka (EVENT-SERVICE…) ; le libellé « application » vient déjà de Micrometer
+      - source_labels: [__meta_eureka_app_name]
+        target_label: eureka_app
+      # instance lisible : participant-service:participant-service-2
+      - source_labels: [__meta_eureka_app_instance_id]
+        target_label: instance
+
+  # Le serveur Eureka ne s'enregistre pas lui-même : cible fixe
+  - job_name: eureka-server
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["eureka-server:8761"]
+        labels:
+          instance: eureka-server
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

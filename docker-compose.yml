@@ -15,6 +15,7 @@ x-spring-service: &spring-service
     CONFIG_SERVER_URL: http://config-server:8888
     EUREKA_URL: http://eureka-server:8761/eureka
     AXON_SERVER: axon-server:8124
+    ZIPKIN_URL: http://zipkin:9411/api/v2/spans
     JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
 
 x-healthcheck: &healthcheck
@@ -260,7 +261,56 @@ services:
       <<: *healthcheck
       test: ["CMD-SHELL", "wget -qO- http://localhost:8105/actuator/health | grep -q '\"status\":\"UP\"'"]
 
+  # ===================================================== Observabilité (phase 6)
+  # Prometheus découvre les instances par Eureka ; Grafana est provisionné (sources, tableaux de bord)
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    profiles: [core, observability]
+    restart: unless-stopped
+    mem_limit: 384m
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d", "--web.enable-lifecycle"]
+    ports: ["9091:9090"]
+    volumes:
+      - ./docker/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      eureka-server: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/ready | grep -q Ready"]
+
+  grafana:
+    image: grafana/grafana:13.0.13
+    profiles: [core, observability]
+    restart: unless-stopped
+    mem_limit: 384m
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      # consultation sans compte pendant la démonstration (lecture seule)
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/events-jvm-http.json
+    ports: ["3001:3000"]
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep -q ok"]
+
+  zipkin:
+    image: openzipkin/zipkin:3.6.1
+    profiles: [core, observability]
+    restart: unless-stopped
+    mem_limit: 512m
+    ports: ["9411:9411"]
+
 volumes:
   mysql-data:
   axon-data:
   axon-events:
+  prometheus-data:
+  grafana-data:
