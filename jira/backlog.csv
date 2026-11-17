@@ -1,21 +1,21 @@
 Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,Status
-1,,Epic,Git et JIRA,"GitFlow (main, develop, feature/*), commits conventionnels citant la clé JIRA, tags de version",Medium,git,,To Do
-2,,Epic,Socle Spring Cloud,"Config Server (config-repo Git), Eureka, API Gateway",Highest,spring-cloud,,To Do
-3,,Epic,Bases de données MySQL,Une base et un utilisateur par microservice sur un serveur MySQL,Highest,mysql,,To Do
-4,,Epic,Microservices métier,"event, participant, logistics, feedback, statistics : reprise des 5 branches de l'équipe",Highest,services,,To Do
-5,,Epic,OpenFeign,Remplacement des relations JPA inter-services par des ID et des appels Feign,Highest,feign,,To Do
+1,,Epic,Git et JIRA,"GitFlow (main, develop, feature/*), commits conventionnels citant la clé JIRA, tags de version",Medium,git,,Done
+2,,Epic,Socle Spring Cloud,"Config Server (config-repo Git), Eureka, API Gateway",Highest,spring-cloud,,Done
+3,,Epic,Bases de données MySQL,Une base et un utilisateur par microservice sur un serveur MySQL,Highest,mysql,,Done
+4,,Epic,Microservices métier,"event, participant, logistics, feedback, statistics : reprise des 5 branches de l'équipe",Highest,services,,Done
+5,,Epic,OpenFeign,Remplacement des relations JPA inter-services par des ID et des appels Feign,Highest,feign,,Done
 6,,Epic,Résilience4j et pannes,"Retry, RateLimiter, CircuitBreaker, TimeLimiter, fallbacks, 5 types de défaillance",Highest,resilience4j,,Done
 7,,Epic,Équilibrage de charge,"Spring Cloud LoadBalancer, 2 instances, preuve de répartition",High,loadbalancer,,Done
-8,,Epic,CQRS Axon,"Axon Server, EventAggregate, projections et requêtes dans statistics-service (mon module)",Highest,axon;cqrs,,To Do
+8,,Epic,CQRS Axon,"Axon Server, EventAggregate, projections et requêtes dans statistics-service (mon module)",Highest,axon;cqrs,,Done
 9,,Epic,Observabilité,"Micrometer, Prometheus, Grafana, Zipkin, alertes",High,observability,,Done
 10,,Epic,Documentation des API,"Swagger/OpenAPI agrégé dans la Gateway, collection Postman",High,swagger;postman,,Done
 11,,Epic,Sécurité Keycloak,"Realm events, rôles ADMIN/USER, Gateway resource server, propagation du JWT — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak;security,,Won't Do
 12,,Epic,Frontend Angular,"Frontend de feature/feedback étendu : participants, logistique, dashboard statistiques, Keycloak",Medium,angular,,Done
 13,,Epic,Qualité,"Handler global, validation, tests WireMock et AggregateTestFixture, JaCoCo >= 70 % sur statistics",High,quality;tests,,Done
 14,,Epic,CI/CD Jenkins,"Jenkinsfile multi-services, SonarQube et quality gate, Trivy, Docker, paramètres PUSH_IMAGES et DEPLOY_AWS",Medium,jenkins;sonarqube;trivy,,Done
-15,,Epic,Docker Compose,"Healthchecks, depends_on conditionnels, profils core/observability/security/frontend/lite",High,docker,,To Do
+15,,Epic,Docker Compose,"Healthchecks, depends_on conditionnels, profils core/observability/security/frontend/lite",High,docker,,Done
 16,,Epic,AWS,"Cible A : EC2 + Docker Compose (Learner Lab), make aws-up / aws-down, rien n'est lancé avant rechargement",Low,aws;terraform;ansible,,Done
-17,,Epic,Livrables de présentation,"COMMANDES, CAPTURES, SCENARIO-DEMO, THEORIE, PRESENTATION-PLAN, README, APRES-PUSH, ETAT-FINAL",High,docs,,To Do
+17,,Epic,Livrables de présentation,"COMMANDES, CAPTURES, SCENARIO-DEMO, THEORIE, PRESENTATION-PLAN, README, APRES-PUSH, ETAT-FINAL",High,docs,,Done
 18,1,Story,Initialiser le monorepo,"POM parent (Boot 3.5.16, Cloud 2025.0.3, Axon 4.13.3), GitFlow, conventions de commit",Highest,git;maven,2,Done
 19,18,Task,POM parent et versions de la plateforme,"dependencyManagement Spring Cloud, Axon, springdoc ; pluginManagement JaCoCo ; mvn validate",High,maven,1,Done
 20,18,Task,Branches GitFlow et conventions,"main, develop, feature/EVT-xx-* fusionnées en --no-ff ; commits type(portée): message EVT-xx",Medium,git,1,Done
@@ -50,14 +50,14 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 49,47,Task,Note moyenne des feedbacks,Moyenne et nombre d'avis par événement et au global,High,statistics,1,Done
 50,8,Story,Replay de la projection,Reset du token et reconstruction de db_stats depuis l'event store,High,axon;statistics,2,Done
 51,6,Story,Configuration Resilience4j,"Retry 3 x 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s dans config-repo",Highest,resilience4j,3,Done
-52,51,Task,Fallbacks explicites,"Une méthode fallback par appel Feign ; 503 clair en écriture, réponse dégradée en lecture",Highest,resilience4j,2,To Do
+52,51,Task,Fallbacks explicites,"Une méthode fallback par appel Feign ; 503 clair en écriture, réponse dégradée en lecture",Highest,resilience4j,2,Done
 53,6,Task,Panne 1 : disponibilité,scripts/pannes/1-disponibilite.sh : docker stop d'un service appelé,High,pannes,1,Done
 54,6,Task,Panne 2 : temps de réponse > 5 s,Latence simulée activée par une propriété du Config Server,High,pannes,1,Done
 55,6,Task,Panne 3 : réponse incorrecte,"Réponse corrompue détectée, rejetée, fallback déclenché",High,pannes,1,Done
 56,6,Task,Panne 4 : erreur réseau,URL mal configurée entre services puis correction à chaud (/actuator/refresh),High,pannes,1,Done
 57,6,Task,Panne 5 : dépendance externe,Base de données inaccessible : health DOWN et circuit ouvert,High,pannes,1,Done
 58,7,Story,Deux instances et X-Instance-Id,participant-service x2 (Feign) et statistics-service x2 (Gateway) ; instance exposée dans chaque réponse,High,loadbalancer,2,Done
-59,58,Task,Script de répartition,N requêtes et comptage par instance,Medium,loadbalancer,1,To Do
+59,58,Task,Script de répartition,N requêtes et comptage par instance,Medium,loadbalancer,1,Done
 60,9,Story,Métriques Prometheus,"actuator/prometheus sur tous les services, scraping via Eureka",High,prometheus,2,Done
 61,9,Story,Dashboards Grafana provisionnés,"JVM, HTTP, Resilience4j (état du circuit), métriques métier",High,grafana,3,Done
 62,9,Story,Traçage Zipkin,Gateway -> service -> Feign ; traceId et spanId dans les logs,High,zipkin,2,Done
@@ -82,9 +82,9 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 81,16,Story,Ansible,"Docker, Compose, swap, dossiers",Low,ansible,2,Done
 82,16,Story,make aws-up / aws-down,"Vérifs, plan, confirmation, apply, Ansible, rsync, compose, tests de fumée, URL",Low,aws,3,Done
 83,16,Task,AWS-RUNBOOK,Procédure pas à pas et coût horaire,Low,aws;docs,1,Done
-84,17,Story,COMMANDES et CAPTURES,"Toutes les commandes exécutées, par technologie ; checklist des captures",High,docs,2,To Do
-85,17,Story,Scénario de démonstration,"10 minutes : création d'un événement jusqu'au dashboard, pannes et circuit breaker",High,docs,1,To Do
-86,17,Story,THEORIE,Questions/réponses de l'oral avec lien vers le code,High,docs,2,To Do
-87,17,Story,Plan de présentation,"Slides par technologie, statistics-service en avant",High,docs,2,To Do
-88,17,Task,"README, APRES-PUSH et ETAT-FINAL","Démarrage en une commande, procédure après push, état final",High,docs,1,To Do
+84,17,Story,COMMANDES et CAPTURES,"Toutes les commandes exécutées, par technologie ; checklist des captures",High,docs,2,Done
+85,17,Story,Scénario de démonstration,"10 minutes : création d'un événement jusqu'au dashboard, pannes et circuit breaker",High,docs,1,Done
+86,17,Story,THEORIE,Questions/réponses de l'oral avec lien vers le code,High,docs,2,Done
+87,17,Story,Plan de présentation,"Slides par technologie, statistics-service en avant",High,docs,2,Done
+88,17,Task,"README, APRES-PUSH et ETAT-FINAL","Démarrage en une commande, procédure après push, état final",High,docs,1,Done
 89,4,Story,"statistics-service, version AVANT CQRS","Mon module : statistiques calculées par Feign (event, participant, logistics, feedback), source interchangeable StatsSource, en-tête X-Stats-Source ; base de comparaison de la phase 6",Highest,services,3,Done
