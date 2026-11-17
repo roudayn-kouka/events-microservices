@@ -278,7 +278,22 @@ _Retiré du périmètre (2026-11-16) : voir THEORIE Q19._
 | Q3 | `statistics-service/target/site/jacoco/index.html` | Rapport de couverture de mon module | 97,7 % des lignes, 87,5 % des branches |
 
 ## Jenkins · SonarQube · Trivy
-_Phase 11._
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| CI1 | `docker start jenkins sonarqube` | Conteneurs existants de `~/devops` (jamais recréés) | Jenkins sur 8080, SonarQube 9.9 sur 9000 |
+| CI2 | `bash ci/git-daemon.sh start` puis `git ls-remote git://localhost:9418/events-microservices` | Dépôt local servi en lecture seule (`git://`, montage `:ro`) | les branches `develop`… |
+| CI3 | `bash ci/installer-job.sh` | Copie du job `events-microservices` dans `jenkins_home`, puis redémarrage | « Jenkins redémarré : http://localhost:8080/job/events-microservices/ » |
+| CI4 | un commit sur `develop` | Déclenchement par scrutation (2 minutes) | un nouveau build dans le job |
+| CI5 | http://localhost:8080/job/events-microservices/ | Vue des étapes (Stage View) | étapes vertes, Push et AWS « skipped » |
+| CI6 | `bash ci/changements.sh 3eed6b6 /tmp/c.properties 08e7cb8` | Détection des changements sur un commit qui ne touche que le frontend | `SERVICES=frontend`, `JAVA=false` |
+| CI7 | http://localhost:9000/dashboard?id=events-microservices | Projet SonarQube | quality gate « Passed », couverture importée de JaCoCo |
+| CI8 | Job → build → *Artifacts* → `rapports/trivy-*.txt` | Rapports Trivy de chaque image | `Total: 7 (HIGH: 4, CRITICAL: 3)` (services), `0` (frontend) |
+| CI9 | *Build with Parameters* | Paramètres | `PUSH_IMAGES`, `DEPLOY_AWS`, `TRIVY_BLOQUANT` décochés par défaut |
 
 ## Terraform · Ansible · AWS (à exécuter après rechargement)
-_Phase 12._
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| AWS1 | `make aws-check` | Tout vérifier sans AWS : Terraform fmt/validate/test (fournisseur simulé), Ansible syntax-check et lint, ShellCheck, tests des scripts | « Success! 5 passed », « Passed: 0 failure(s) », « Tous les tests de déploiement passent. » |
+| AWS2 | `DRY_RUN=1 ADMIN_CIDR=196.203.10.20/32 make aws-up` | Déroulé à blanc (lab démarré pour `sts`) | commandes `[à blanc]` dans l'ordre |
+| AWS3 | `make aws-up` | Déploiement réel : plan, confirmation « oui », apply, Ansible, rsync, compose | URL de démonstration |
+| AWS4 | `make aws-down` | Destruction (confirmation « détruire ») | « Ressources détruites. » |

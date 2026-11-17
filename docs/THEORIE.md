@@ -238,6 +238,23 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Alerte trop fugace** : un circuit OPEN passe HALF_OPEN au bout de 10 s. L'alerte porte donc sur « pas CLOSED » (OPEN ou HALF_OPEN).
 - **Latence p95** : il faut des histogrammes (`percentiles-histogram`) pour que Prometheus calcule `histogram_quantile` sur toutes les instances. Des percentiles calculés dans chaque JVM ne s'additionnent pas.
 
+## Intégration continue (phase 11)
+
+### Q29. Comment le pipeline Jenkins traite-t-il plusieurs services, et que détecte-t-il ?
+
+- **Étapes** : changements → build et tests du réacteur (seuil JaCoCo bloquant) → **en parallèle** analyse SonarQube et tests et build du frontend → quality gate → **en parallèle**, pour chaque service modifié, image Docker puis scan Trivy → push Docker Hub et déploiement AWS, **désactivés par défaut** (`PUSH_IMAGES`, `DEPLOY_AWS`).
+- **Détection des changements** : `git diff` entre le dernier build réussi (`GIT_PREVIOUS_SUCCESSFUL_COMMIT`) et le commit construit. Un changement commun (POM parent, `common`, `events-api`, pipeline) reconstruit tout. Sinon, seules les images des services modifiés sont reconstruites et scannées. Vérifié : un commit qui ne touche que `frontend/` donne `SERVICES=frontend`.
+- **Pourquoi les tests portent sur tout le réacteur** : les services dépendent de `common` et de `events-api`, Sonar analyse le projet entier, et le seuil JaCoCo doit être vérifié partout. Le gain porte sur les étapes coûteuses : images, Trivy, frontend.
+- **Sans push** : le Jenkins de `~/devops` lit le dépôt local par `git://` (conteneur `git daemon`, dépôt monté en lecture seule). Recréer le conteneur Jenkins pour y monter le dossier était exclu, et le plugin Git refuse `file://` (SECURITY-2478). Un commit local déclenche un build par scrutation ; après le push, c'est le webhook GitHub qui le fera.
+- **Quality gate sans webhook** : l'API Sonar (`ceTaskUrl`, puis `project_status`), parce qu'aucun serveur Sonar n'est déclaré dans Jenkins.
+
+### Q30. Qu'a trouvé Trivy, et qu'avez-vous corrigé ?
+
+- **Constat (build 1)** : les couches système des images Java étaient saines (Alpine 3.24 : 0). Les vulnérabilités venaient des **bibliothèques** embarquées dans les JAR (Tomcat, Jackson, Netty, Spring, BouncyCastle, Guava…), plus 57 dans les paquets Alpine de l'image nginx du frontend.
+- **Corrigé** (versions de patch, par les propriétés de Spring Boot, 339 tests toujours verts) : Tomcat 10.1.55 → **10.1.59**, Jackson 2.21.4 → 2.21.7, Netty 4.1.135 → 4.1.137 ; `apk upgrade` dans l'image du frontend. Résultat : statistics-service passe de **18 à 7** (CRITICAL de 8 à 3), et le frontend de **57 à 0**.
+- **Piège** : `mvn verify` sans `clean` gardait les anciennes bibliothèques dans le JAR, qui était « à jour » aux yeux de Maven. Le pipeline fait désormais `mvn clean verify`.
+- **Non corrigé, et pourquoi** : Spring Framework 6.2 n'a de correctif qu'en 7.x, donc Spring Boot 4, incompatible avec Axon 4 (Q2). BouncyCastle et Guava sont des dépendances transitives de Spring Cloud et de gRPC/Axon : forcer leur version sans tests d'intégration dédiés serait risqué. Le paramètre `TRIVY_BLOQUANT` fait échouer le build sur les CRITICAL corrigeables. Il est désactivé tant que ces trois-là ne peuvent pas l'être.
+
 ## Sécurité (non implémentée : choix de périmètre)
 
 ### Q19. Comment sécuriseriez-vous la Gateway et les services ?

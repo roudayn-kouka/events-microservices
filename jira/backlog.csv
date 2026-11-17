@@ -12,7 +12,7 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 11,,Epic,Sécurité Keycloak,"Realm events, rôles ADMIN/USER, Gateway resource server, propagation du JWT — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak;security,,Won't Do
 12,,Epic,Frontend Angular,"Frontend de feature/feedback étendu : participants, logistique, dashboard statistiques, Keycloak",Medium,angular,,Done
 13,,Epic,Qualité,"Handler global, validation, tests WireMock et AggregateTestFixture, JaCoCo >= 70 % sur statistics",High,quality;tests,,Done
-14,,Epic,CI/CD Jenkins,"Jenkinsfile multi-services, SonarQube et quality gate, Trivy, Docker, paramètres PUSH_IMAGES et DEPLOY_AWS",Medium,jenkins;sonarqube;trivy,,To Do
+14,,Epic,CI/CD Jenkins,"Jenkinsfile multi-services, SonarQube et quality gate, Trivy, Docker, paramètres PUSH_IMAGES et DEPLOY_AWS",Medium,jenkins;sonarqube;trivy,,Done
 15,,Epic,Docker Compose,"Healthchecks, depends_on conditionnels, profils core/observability/security/frontend/lite",High,docker,,To Do
 16,,Epic,AWS,"Cible A : EC2 + Docker Compose (Learner Lab), make aws-up / aws-down, rien n'est lancé avant rechargement",Low,aws;terraform;ansible,,To Do
 17,,Epic,Livrables de présentation,"COMMANDES, CAPTURES, SCENARIO-DEMO, THEORIE, PRESENTATION-PLAN, README, APRES-PUSH, ETAT-FINAL",High,docs,,To Do
@@ -73,11 +73,11 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 72,13,Story,Handler global et validation,"@RestControllerAdvice, DTO @Valid, erreurs normalisées",High,quality,2,Done
 73,13,Task,Tests Feign avec WireMock,Clients Feign et fallbacks testés sans les autres services,High,tests,2,Won't Do
 74,13,Task,JaCoCo >= 70 % sur statistics-service,Seuil appliqué par mvn verify,High,tests;statistics,2,Done
-75,14,Story,Jenkinsfile multi-services,"Étapes parallèles, détection des services modifiés",Medium,jenkins,3,To Do
-76,75,Task,SonarQube et quality gate,Analyse par service sur le SonarQube de ~/devops,Medium,sonarqube,1,To Do
-77,75,Task,Scan Trivy,Images et dépendances,Medium,trivy,1,To Do
-78,75,Task,Paramètres PUSH_IMAGES et DEPLOY_AWS,false par défaut ; push Docker Hub et déploiement AWS conditionnels,Medium,jenkins,1,To Do
-79,75,Task,Webhook GitHub,Documenté dans APRES-PUSH.md,Low,jenkins,1,To Do
+75,14,Story,Jenkinsfile multi-services,"Étapes parallèles, détection des services modifiés",Medium,jenkins,3,Done
+76,75,Task,SonarQube et quality gate,Analyse par service sur le SonarQube de ~/devops,Medium,sonarqube,1,Done
+77,75,Task,Scan Trivy,Images et dépendances,Medium,trivy,1,Done
+78,75,Task,Paramètres PUSH_IMAGES et DEPLOY_AWS,false par défaut ; push Docker Hub et déploiement AWS conditionnels,Medium,jenkins,1,Done
+79,75,Task,Webhook GitHub,Documenté dans APRES-PUSH.md,Low,jenkins,1,Done
 80,16,Story,Terraform EC2,"VPC, SG limité à admin_cidr, EC2 (t3.large, repli t3.medium), LabInstanceProfile",Low,terraform,3,To Do
 81,16,Story,Ansible,"Docker, Compose, swap, dossiers",Low,ansible,2,To Do
 82,16,Story,make aws-up / aws-down,"Vérifs, plan, confirmation, apply, Ansible, rsync, compose, tests de fumée, URL",Low,aws,3,To Do
