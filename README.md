@@ -5,7 +5,7 @@ Gestion des événements de la Faculté des Sciences de Tunis (FST) : événemen
 Projet individuel — DS Architecture des composants, GL5 — Roudayna Kouka.
 Module mis en avant : **statistics-service** (côté requêtes CQRS).
 
-Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaque phase.
+Plan détaillé : [docs/PLAN.md](docs/PLAN.md). État final : [docs/ETAT-FINAL.md](docs/ETAT-FINAL.md).
 
 ## État d'avancement
 
@@ -23,6 +23,22 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 | 10 | Seuil JaCoCo bloquant dans `mvn verify` (lignes ≥ 70 %, branches ≥ 60 %) | Terminée |
 | 11 | Pipeline Jenkins (job local `events-microservices`) : détection des changements, Sonar et quality gate, Trivy, étapes parallèles ; push et AWS désactivés | Terminée |
 | 12 | AWS préparé sans rien créer : Terraform (EC2, tests simulés), Ansible, `make aws-up` / `aws-down`, AWS-RUNBOOK | Terminée (déploiement à lancer : AWS-RUNBOOK.md) |
+| 13 | Livrables finaux, tag `v1.0.0` | Terminée |
+| 8 | Keycloak | Retirée du périmètre (THEORIE Q19) |
+
+## Livrables
+
+| Document | Contenu |
+|---|---|
+| [COMMANDES](docs/COMMANDES.md) | Toutes les commandes, par technologie, avec le résultat attendu |
+| [CAPTURES](docs/CAPTURES.md) | Liste des captures d'écran (C1 à C97) |
+| [SCENARIO-DEMO](docs/SCENARIO-DEMO.md) | Démonstration de 10 minutes, préparation et plans de secours |
+| [THEORIE](docs/THEORIE.md) | Questions du jury et réponses (Q1 à Q30) |
+| [PRESENTATION-PLAN](docs/PRESENTATION-PLAN.md) | Plan des slides, avec extraits AVANT / APRÈS |
+| [ETAT-FINAL](docs/ETAT-FINAL.md) | Ce qui est fait et testé, ce qui reste |
+| [APRES-PUSH](docs/APRES-PUSH.md) | Publication GitHub, webhook Jenkins, Docker Hub |
+| [AWS-RUNBOOK](docs/AWS-RUNBOOK.md) | Déploiement sur l'EC2 et destruction |
+| [JOURNAL](JOURNAL.md) | Heures réelles, problèmes et corrections, phase par phase |
 
 ## Prérequis
 
@@ -62,6 +78,9 @@ make down     # arrêt (données conservées)
 | Zipkin (traces) | http://localhost:9411 |
 | Config Server | http://localhost:8888/{service}/default |
 | MySQL | `localhost:3307` (une base et un utilisateur par service) |
+| Swagger agrégé | http://localhost:8088/swagger-ui.html |
+| Jenkins (`~/devops`), job du projet | http://localhost:8080/job/events-microservices/ |
+| SonarQube (`~/devops`) | http://localhost:9000/dashboard?id=events-microservices |
 
 ## Arborescence
 
@@ -71,7 +90,7 @@ events-microservices/
 ├── config-server/          Configuration centralisée (Git + surcharges à chaud)
 ├── eureka-server/          Annuaire de services
 ├── api-gateway/            Point d'entrée : routes lb://, CORS
-├── common/                 Erreurs JSON communes (ApiError), en-tête X-Instance-Id
+├── common/                 Erreurs JSON, en-tête X-Instance-Id, résilience Feign (circuits utilisateurs et -batch)
 ├── events-api/             Contrats des événements Axon (records, sans dépendance)
 ├── participant-service/    Participants (8102, db_participant)
 ├── logistics-service/      Logistique et coût réservé (8103, db_logistics)
@@ -80,10 +99,15 @@ events-microservices/
 ├── statistics-service/     ⭐ Mon module : côté requêtes CQRS (8105, db_stats), replay
 ├── config-repo/            Configuration de référence (un YAML par service)
 ├── config-overrides/       Surcharges à chaud des scénarios de panne (non versionnées)
-├── docker/mysql/init/      Création des bases et utilisateurs par service
-├── docker-compose.yml      Stack locale (profils core, lite…)
-├── Makefile                make up / down / health…
-├── scripts/                init-env.sh, health.sh, seed-demo.sh
+├── frontend/               Angular 20 (5 écrans, statistiques en SVG), nginx, tests Vitest, e2e Playwright
+├── docker/                 MySQL (init), Prometheus, Grafana (tableaux générés)
+├── docker-compose.yml      Stack locale (profils core, lite, observability, frontend)
+├── Makefile                make up / health / panne / newman / e2e / aws-check… (make help)
+├── scripts/                init-env, health, seed-demo, pannes/ (5 scénarios), répartition, replay
+├── postman/                Collection (69 requêtes), pannes, environnements local et AWS
+├── Jenkinsfile             Pipeline multi-services (phase 11)
+├── ci/                     Détection des changements, quality gate, job Jenkins, git daemon
+├── infra/aws/              Terraform (EC2), Ansible, make aws-up / aws-down (phase 12)
 ├── jira/                   Backlog importable (EVT-1 à EVT-89)
-└── docs/                   Plan, commandes, captures, théorie, scénario, présentation
+└── docs/                   Plan, commandes, captures, théorie, scénario, présentation, après-push, AWS, état final
 ```

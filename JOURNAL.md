@@ -16,7 +16,8 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 9 — Frontend Angular (allégé) | 2026-11-17 12:37 | 2026-11-17 12:48 | 11 min (+ ~25 min préparées pendant les runs Newman) | 0,5 à 1 j | 5 écrans via la Gateway, graphiques SVG, `make e2e` 13/13 |
 | 10 — Seuil JaCoCo bloquant | 2026-11-17 12:48 | 2026-11-17 12:53 | 5 min | 0,5 j (réduite à un commit) | `jacoco:check` lignes ≥ 70 %, branches ≥ 60 %, preuve du blocage |
 | 11 — Pipeline Jenkins, Sonar, Trivy | 2026-11-17 12:53 | 2026-11-17 13:36 | 43 min | 1 j | job local `events-microservices`, 3 builds verts, CVE CRITICAL de 8 à 3 |
-| 12 — AWS préparé (sans apply) | 2026-11-17 13:10 | 2026-11-17 13:42 | 32 min (en parallèle des builds Jenkins) | 0,5 j | Terraform 5 tests simulés, ansible-lint, 16 tests des scripts, runbook |
+| 12 — AWS préparé (sans apply) | 2026-11-17 13:20 | 2026-11-17 13:38 | 18 min (en parallèle des builds Jenkins) | 0,5 j | Terraform 5 tests simulés, ansible-lint, 16 tests des scripts, runbook |
+| 13 — Livrables finaux | 2026-11-17 13:38 | 2026-11-17 13:53 | 15 min | 0,5 j | SCENARIO-DEMO et PRESENTATION-PLAN à jour, vérification finale complète, tag v1.0.0 |
 
 ## Phase 3 — CQRS Axon
 
@@ -164,7 +165,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 
 ## Phase 12 — AWS préparé, sans apply
 
-- **Début** : 13:10 (pendant les builds Jenkins) — **fin** : 13:42 — **durée réelle** : 32 min.
+- **Début** : 13:20 (pendant les builds Jenkins) — **fin** : 13:38 (fusion) — **durée réelle** : 18 min.
 - **Fait** :
   - `infra/aws/terraform` : VPC, sous-réseau public, security group limité à `admin_cidr`, EC2 avec `LabInstanceProfile`, IMDSv2, disque gp3 chiffré, IP élastique ;
   - `infra/aws/ansible` : Docker, Compose, swap, dossier ;
@@ -182,6 +183,21 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   - 16 tests des scripts avec de faux `aws`, `terraform`, `ssh` et `rsync` (ordre des étapes, confirmation obligatoire, arrêt sans identifiants, mode à blanc, destruction confirmée) ;
   - filtre `rsync` vérifié à blanc : 10 JAR et `.git` envoyés, ni `.env` ni `node_modules`.
 - **Non fait, volontairement** : aucun `terraform apply` ni appel AWS. Le playbook n'a pas été rejoué dans un conteneur Ubuntu (Docker dans Docker, sans systemd) : son exécution réelle est dans le runbook.
+
+## Phase 13 — Livrables finaux
+
+- **Début** : 13:38 — **fin** : 13:53 (fusion) — **durée réelle** : 15 min.
+- **Fait** :
+  - SCENARIO-DEMO réécrit : le déroulé réel, sans Keycloak, avec l'UI pendant les pannes, le bulkhead, Jenkins, AWS et les plans de secours ;
+  - PRESENTATION-PLAN : lignes des phases 9 à 12 et sections AVANT / APRÈS (cron, frontend, JaCoCo, pipeline, AWS) ;
+  - README : livrables, URL, arborescence ; CAPTURES C75 à C97 ; ETAT-FINAL : vérification finale et état des conteneurs ;
+  - backlog : 83 tickets « Done », 6 « Won't Do ».
+- **Jenkins** : pour un job Pipeline, la scrutation suit la branche du **dernier build** (`feature/ci`, renommée entre-temps), d'où « No changes ». Correction : une référence `feature/ci` temporaire sur `develop` a provoqué un build avec la nouvelle configuration (build 4, sur `develop`), puis elle a été supprimée.
+- **Vérification finale (core)** :
+  - le premier `make health` a échoué sur Prometheus, qui venait de redémarrer (cibles « unknown ») ; il est vert après le premier scrape ;
+  - `make newman` 0 échec, `make e2e` 13/13, `make newman-pannes` 5/5 lancé seul ;
+  - `config-overrides/` vide, circuits CLOSED.
+- **Branches** : les branches de travail ont été renommées selon la convention `feature/EVT-xx-…` (EVT-55, 12, 13, 14, 16, 17).
 
 ## Périmètre révisé (2026-11-16, à la demande)
 

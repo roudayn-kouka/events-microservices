@@ -14,19 +14,19 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 8 | API Gateway | Routes `lb://` (extrait de `api-gateway.yml`), `StripPrefix`, CORS Angular (200 contre 403), 503 sans instance, routes en lecture seule. Commandes W1 à W5 | C11, C12 |
 | 9 | MySQL | Une base et un utilisateur par service (script d'initialisation), isolation prouvée par `ERROR 1044`, port 3307. Commandes S1 à S3 | C13 |
 | 9 bis | Docker Compose du socle | Healthchecks, `depends_on: service_healthy`, `.env` généré, `make up` / `make health`, redémarrage tolérant (fail-fast + retry). Commandes D1 à D6 et C6 | C5, C6, C14 |
-| 10 | Services et Feign | Relations JPA remplacées par des ID et des appels Feign | _phase 2_ |
+| 10 | Services et Feign | Relations JPA remplacées par des ID et des appels Feign ; 179 tests d'équipe repris | C15 à C43 |
 | 11 | **CQRS Axon (mon module)** | Agrégat, commandes, projections dans statistics-service, replay, comparaison AVANT / APRÈS | C44 à C52 |
-| 12 | Résilience4j | Configuration, fallbacks, 5 pannes, circuit OPEN → HALF_OPEN → CLOSED | C53 à C60 |
+| 12 | Résilience4j | Configuration, fallbacks, 5 pannes, circuit OPEN → HALF_OPEN → CLOSED ; **bulkhead** : circuit séparé pour le cron (THEORIE Q28) | C53 à C60 |
 | 13 | LoadBalancer | 2 instances, répartition 50 / 50 prouvée, bascule invisible, replay à 2 instances | C61 à C64 |
 | 14 | Observabilité | Prometheus (découverte Eureka), 3 tableaux de bord Grafana, trace Zipkin de bout en bout, alertes | C65 à C71 |
 | 15 | Swagger et Postman | Swagger agrégé (sélecteur des 5 services), 69 requêtes Postman, 5 pannes vérifiées par Newman | C72 à C74 |
 | 16 | Sécurité (non implémentée, choix de périmètre) | Comment on sécuriserait la Gateway : OAuth2 / JWT (THEORIE Q19) | — |
-| 17 | Angular | Écrans, **dashboard statistiques** | _phase 9_ |
-| 18 | Qualité | Tests, JaCoCo ≥ 70 % sur statistics | _phase 10_ |
-| 19 | Jenkins, SonarQube, Trivy | Pipeline multi-services | _phase 11_ |
-| 20 | AWS | Cible A, `make aws-up`, coût par heure | _phase 12_ |
+| 17 | Angular | 5 écrans via la Gateway, **tableau de bord statistiques** en SVG, vue dégradée pendant une panne, `make e2e` | C75 à C79 |
+| 18 | Qualité | 339 tests, seuil JaCoCo **bloquant** (lignes ≥ 70 %, branches ≥ 60 %), statistics à 97,7 % | C80 à C82 |
+| 19 | Jenkins, SonarQube, Trivy | Pipeline multi-services sans push (dépôt local en `git://`), détection des changements, étapes parallèles, quality gate, Trivy avant / après | C83 à C91 |
+| 20 | AWS | Cible A (EC2 + Compose, ≈ 0,10 $/h), Terraform testé sans AWS, confirmation avant apply | C92, C93 (C95 à C97 après le lab) |
 | 21 | Démonstration | Scénario de 10 minutes | — |
-| 22 | Bilan | Ce qui est fait, ce qui reste | — |
+| 22 | Bilan | Fait : phases 0 à 7 et 9 à 12 ; retiré : Keycloak (Q19) ; reste : push et AWS réel (APRES-PUSH, AWS-RUNBOOK) | — |
 
 ---
 
@@ -503,3 +503,58 @@ ContextExecutorService.wrap(executor, ContextSnapshotFactory.builder().build()::
 **Deux défauts trouvés en réel** :
 - les mesures Feign étaient rejetées par Prometheus : un conflit d'étiquettes avec `http.client.requests` de Spring. Elles sont renommées `feign.client.requests` ;
 - une alerte sur l'état OPEN seul disparaissait au bout de 10 s (passage à HALF_OPEN) : elle couvre maintenant OPEN et HALF_OPEN.
+
+---
+
+## Correctif après la phase 7 : isolation des circuits (bulkhead) — slide 12
+
+**Symptôme** : à la panne 3, le 502 attendu (« réponse incorrecte ») devenait parfois un 503 (« circuit ouvert »).
+**Diagnostic** : en relevant `/actuator/circuitbreakers` toutes les 0,5 s, le circuit était CLOSED, à 0 échec, au début de la panne. C'était le cron `calculCout` (seconde :00) qui, en appelant participant-service pendant la panne, comptait 3 échecs (Retry autour du circuit) dans le circuit **des utilisateurs**.
+
+```java
+// AVANT : le cron partage le circuit « participant-service » des requêtes des utilisateurs
+public void calculCoutPlanifie() { calculCout(); }
+// APRÈS : traitement de fond → circuits « participant-service-batch », sans Retry
+public void calculCoutPlanifie() { ClientsResilients.enTraitementDeFond(this::calculCout); }
+```
+Preuve : le test `lesEchecsDuTraitementDeFondLaissentLeCircuitDesUtilisateursFerme`, et 3 passages de `make newman-pannes` sans échec, pendant lesquels le cron a croisé la panne 3.
+
+## Frontend Angular (phase 9) — slide 17
+
+| Écran | Service | À montrer |
+|---|---|---|
+| Statistiques | statistics-service (CQRS) | 6 indicateurs, anneaux (tâches, logistique), barres (participants, coût, notes) ; badges `source : projections-cqrs` et instance servie |
+| Événements, Détail | event-service (+ Feign) | création = commande Axon ; inscription ; **bandeau « Vue dégradée »** quand participant-service est arrêté |
+| Participants, Logistique | participant-, logistics-service | création, changement de tâche, réservation |
+| Avis | feedback-service | règle métier : avis refusé pour un événement futur (400, message affiché) |
+
+Choix : base Angular 20 de l'équipe ; graphiques en **SVG sans bibliothèque** (bundle de 101 ko compressé) ; nginx transmet `/api` à la Gateway (même origine, donc pas de CORS) ; `make e2e` joue le parcours dans Chromium (13 contrôles).
+
+## Qualité (phase 10) — slide 18
+
+`jacoco:check` dans le POM parent, à la phase `verify` : **le build échoue** sous 70 % de lignes ou 60 % de branches, dans chaque service métier. Preuve : `-Djacoco.minimum.lignes=0.99` donne `BUILD FAILURE` sur statistics-service (0,97).
+
+| Service | Lignes | Branches |
+|---|---:|---:|
+| ⭐ statistics-service | 97,7 % | 87,5 % |
+| event-service | 95,8 % | 88,9 % |
+| participant-service | 96,0 % | 83,3 % |
+| logistics-service | 88,6 % | 90,0 % |
+| feedback-service | 96,6 % | 97,1 % |
+
+## Jenkins, SonarQube, Trivy (phase 11) — slide 19
+
+```
+Changements ─► Build et tests ─► ┌ SonarQube ┐ ─► Quality gate ─► Images + Trivy (9 en parallèle) ─► Push (off) ─► AWS (off)
+                                 └ Frontend  ┘
+```
+- **Sans push** : le Jenkins de `~/devops` clone `git://events-git/events-microservices` (git daemon, dépôt monté en lecture seule). Un commit local déclenche un build par scrutation.
+- **Détection des changements** : un commit qui ne touche que `frontend/` ne reconstruit que l'image du frontend. Un changement commun reconstruit tout (THEORIE Q29).
+- **Trivy, avant / après** (THEORIE Q30) : statistics-service passe de 18 à 7 (CRITICAL de 8 à 3), le frontend de 57 à 0. Piège : sans `mvn clean`, le JAR gardait les anciennes bibliothèques.
+
+## AWS (phase 12) — slide 20
+
+- Terraform : VPC, sous-réseau public, security group limité à **ton IP**, EC2 `t3.large` avec `LabInstanceProfile` (aucune création IAM), IMDSv2, disque chiffré. Ansible : Docker, swap. Code envoyé par `rsync`, `.env` généré sur l'EC2.
+- **Vérifié sans AWS** : `terraform test` sur un fournisseur simulé (5 runs, dont le refus de `0.0.0.0/0`), qui a trouvé un vrai bug (accents refusés par AWS dans les descriptions) ; ansible-lint ; 16 tests des scripts avec de faux outils.
+- `make aws-up` : plan affiché, puis **confirmation**, puis apply. `make aws-down` : confirmation « détruire ». Coût ≈ 0,10 $/h.
+

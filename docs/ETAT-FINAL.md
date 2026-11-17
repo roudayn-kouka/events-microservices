@@ -220,6 +220,7 @@ Le handler d'exceptions global (`common`) et les DTO `@Valid` existent depuis le
 | 1 | scrutation (premier build, tout reconstruit) | SUCCESS | 11 min | tests 339, quality gate OK, 9 images ; Trivy statistics-service 18 (8 CRITICAL), frontend 57 |
 | 2 | scrutation (POM modifié → tout) | SUCCESS | ≈ 11 min | Tomcat 10.1.56, Jackson, Netty, `apk upgrade` : frontend 0 |
 | 3 | scrutation (POM modifié → tout) | SUCCESS | ≈ 11 min | Tomcat 10.1.59 : statistics-service 7 (3 CRITICAL) |
+| 4 | scrutation, premier build sur `develop` (après la fusion) | SUCCESS | ≈ 11 min | checkout de `origin/develop` ; Push et AWS « skipped » |
 
 Trivy, dernier build : services Java 6 à 8 vulnérabilités (3 à 4 CRITICAL), frontend 0. Restent Spring Framework 6.2 (correctif seulement en 7.x), BouncyCastle 1.80 et Guava (transitives) ; justification dans THEORIE Q30.
 Sonar : la couverture JaCoCo des 5 services métier est importée ; Gateway, Config, Eureka et `common` n'ont pas de rapport JaCoCo.
@@ -227,6 +228,25 @@ Sonar : la couverture JaCoCo des 5 services métier est importée ; Gateway, Con
 ## Phase 12 — AWS : vérifications sans AWS
 
 `make aws-check` : Terraform fmt et validate ; `terraform test` 5/5 (fournisseur simulé) ; Ansible `--syntax-check` et `ansible-lint` (production, 0 échec) ; ShellCheck sur tous les scripts ; 16/16 tests des scripts de déploiement. Aucun appel AWS, aucun `apply`.
+
+## Vérification finale (phase 13, 2026-11-17, stack complète, profil core)
+
+| Contrôle | Résultat |
+|---|---|
+| `mvn clean verify` | 339 tests verts, seuil JaCoCo respecté dans les 5 services |
+| `make health` | « Tout est opérationnel. » (2 instances participant et statistics, Prometheus, Grafana, Zipkin, frontend) |
+| `make newman` | 69 requêtes, 137 assertions, 0 échec |
+| `make newman-pannes` | 5 scénarios vérifiés et rétablis (et 3 passages consécutifs après le correctif du cron) |
+| `make e2e` | 13 contrôles `OK` dans Chromium |
+| `make aws-check` | Terraform 5/5, ansible-lint 0 échec, ShellCheck, 16/16 tests des scripts |
+| Jenkins `events-microservices` | builds 1 à 4 en SUCCESS |
+| Après les tests | `config-overrides/` vide (README seul), tous les circuits CLOSED |
+
+## État des conteneurs laissé en place
+
+- Pile events : profil **core** (complet), démarrée.
+- `~/devops` : `jenkins` et `sonarqube` démarrés (ils étaient arrêtés). `nexus` n'a pas été démarré. Pour les arrêter : `docker stop jenkins sonarqube`.
+- `events-git` (git daemon en lecture seule, pour Jenkins) : démarré. À arrêter après le push : `bash ci/git-daemon.sh stop`.
 
 ## Ce qui reste à faire par l'utilisatrice
 

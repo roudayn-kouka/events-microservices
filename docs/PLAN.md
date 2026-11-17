@@ -3,7 +3,7 @@
 DS Architecture des composants · FST · GL5 — Roudayna Kouka
 Module mis en avant : **statistics-service** (côté requêtes CQRS, projections et tableau de bord).
 
-> Statut : **plan validé le 15/11**. Le dépôt d'équipe `IGL5-G2-EventsProjetcs` est seulement lu, jamais modifié.
+> Statut : **plan validé le 15/11, réalisé le 17/11** (phases 0 à 7 et 9 à 13 ; phase 8 retirée). Suivi réel : `JOURNAL.md` ; bilan : `docs/ETAT-FINAL.md`. Le dépôt d'équipe `IGL5-G2-EventsProjetcs` est seulement lu, jamais modifié.
 
 ### Décisions validées
 
