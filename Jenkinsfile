@@ -102,6 +102,9 @@ pipeline {
                     sh 'bash ci/quality-gate.sh target/sonar/report-task.txt'
                 }
             }
+            post {
+                always { archiveArtifacts artifacts: 'rapports/sonar-*.json', allowEmptyArchive: true }
+            }
         }
 
         stage('Images Docker et Trivy') {

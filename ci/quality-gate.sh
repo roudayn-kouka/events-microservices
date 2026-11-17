@@ -39,4 +39,13 @@ mesures="coverage,bugs,vulnerabilities,security_hotspots,code_smells,duplicated_
 reponse=$(curl -s -u "$SONAR_TOKEN:" "$SERVEUR/api/measures/component?component=$PROJET&metricKeys=$mesures")
 echo "Mesures du projet :"
 echo "$reponse" | tr '{' '\n' | sed -n 's/.*"metric":"\([a-z_]*\)","value":"\([^"]*\)".*/  \1 = \2/p' || true
+
+# Rapports archivés par Jenkins : bugs et vulnérabilités ouverts, Security Hotspots (statut, règle,
+# fichier, ligne). Ils permettent de diagnostiquer sans accès direct à SonarQube.
+mkdir -p rapports
+curl -s -u "$SONAR_TOKEN:" "$SERVEUR/api/issues/search?componentKeys=$PROJET&types=BUG,VULNERABILITY&resolved=false&ps=100" \
+  > rapports/sonar-problemes.json
+curl -s -u "$SONAR_TOKEN:" "$SERVEUR/api/hotspots/search?projectKey=$PROJET&ps=100" > rapports/sonar-hotspots.json
+echo "Bugs et vulnérabilités ouverts : $(grep -o '"total":[0-9]*' rapports/sonar-problemes.json | head -1)"
+echo "Security Hotspots : $(grep -o '"total":[0-9]*' rapports/sonar-hotspots.json | head -1)"
 [[ "$gate" == "OK" || "$gate" == "NONE" ]]
