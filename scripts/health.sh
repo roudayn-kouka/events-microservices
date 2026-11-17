@@ -102,6 +102,14 @@ fi
 tourne grafana && controle "Grafana (3001)" grafana_ok
 tourne zipkin && controle "Zipkin (9411)" zipkin_ok
 
+# Phase 9 (frontend) : nginx sert Angular et transmet /api à la Gateway
+front_ok() { curl -s localhost:4200/healthz | grep -q ok; }
+front_api() { curl -s localhost:4200/api/stats/summary | jq -e '.nbEvents >= 0' >/dev/null; }
+if tourne frontend; then
+  controle "Frontend Angular (4200)" front_ok
+  controle "Frontend : /api transmis à la Gateway (statistiques)" front_api
+fi
+
 echo "Registre Eureka : $(apps_eureka)"
 if (( echecs == 0 )); then
   echo "Tout est opérationnel."

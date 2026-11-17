@@ -19,11 +19,12 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 | 5 | LoadBalancer : 2 instances de participant et de statistics, `make repartition`, `make replay` | Terminée |
 | 6 | Observabilité : Prometheus (découverte Eureka), Grafana (3 tableaux de bord), Zipkin, alertes | Terminée |
 | 7 | Swagger agrégé, Postman (local et AWS), `make newman`, `make newman-pannes` | Terminée |
+| 9 | Angular 20 allégé : statistiques (graphiques SVG), événements, participants, logistique, avis, via la Gateway | Terminée |
 
 ## Prérequis
 
 - WSL Ubuntu avec Docker Desktop (intégration WSL activée), JDK 17, Maven 3.9.
-- Ports libres : 8088, 8888, 8761, 3307 (voir [docs/PLAN.md](docs/PLAN.md), section 4). Les ports de `~/devops` (8080, 8081, 9000, 9090, 3000) ne sont pas utilisés.
+- Ports libres : 4200, 8088, 8888, 8761, 3307 (voir [docs/PLAN.md](docs/PLAN.md), section 4). Les ports de `~/devops` (8080, 8081, 9000, 9090, 3000) ne sont pas utilisés.
 
 ## Démarrage local
 
@@ -36,6 +37,8 @@ make seed     # jeu de données de démonstration (par les API, via la Gateway)
 make panne N=1   # scénario de panne 1 à 5, rétabli automatiquement (scripts/pannes)
 make repartition # répartition de charge entre les 2 instances (Gateway, Feign, bascule)
 make replay      # replay de la projection CQRS (2 instances de statistics-service)
+make front-test  # frontend : tests Vitest et build (node:22)
+make e2e         # frontend : parcours complet dans Chromium (Playwright)
 make down     # arrêt (données conservées)
 ```
 
@@ -45,6 +48,7 @@ make down     # arrêt (données conservées)
 
 | Composant | URL |
 |---|---|
+| **Frontend Angular** | http://localhost:4200 |
 | API Gateway (point d'entrée des API) | http://localhost:8088/api/... |
 | Routes de la Gateway | http://localhost:8088/actuator/gateway/routes |
 | Eureka | http://localhost:8761 |
