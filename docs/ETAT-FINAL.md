@@ -233,13 +233,14 @@ Sonar : la couverture JaCoCo des 5 services métier est importée ; Gateway, Con
 
 | Contrôle | Résultat |
 |---|---|
-| `mvn clean verify` | 339 tests verts, seuil JaCoCo respecté dans les 5 services |
+| `mvn clean verify` | 344 tests verts (après le correctif Sonar), seuil JaCoCo respecté dans les 5 services |
 | `make health` | « Tout est opérationnel. » (2 instances participant et statistics, Prometheus, Grafana, Zipkin, frontend) |
 | `make newman` | 69 requêtes, 137 assertions, 0 échec |
 | `make newman-pannes` | 5 scénarios vérifiés et rétablis (et 3 passages consécutifs après le correctif du cron) |
 | `make e2e` | 13 contrôles `OK` dans Chromium |
 | `make aws-check` | Terraform 5/5, ansible-lint 0 échec, ShellCheck, 16/16 tests des scripts |
-| Jenkins `events-microservices` | builds 1 à 4 en SUCCESS |
+| Jenkins `events-microservices` | builds 1 à 7 en SUCCESS (5 : documentation seule, tout sauté en 3 s) |
+| SonarQube (build 7) | 0 bug, fiabilité A, sécurité A, hotspots revus 100 % (A), couverture 77,7 %, quality gate OK |
 | Après les tests | `config-overrides/` vide (README seul), tous les circuits CLOSED |
 
 ## État des conteneurs laissé en place
