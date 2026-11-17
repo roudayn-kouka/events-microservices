@@ -18,6 +18,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 11 — Pipeline Jenkins, Sonar, Trivy | 2026-11-17 12:53 | 2026-11-17 13:36 | 43 min | 1 j | job local `events-microservices`, 3 builds verts, CVE CRITICAL de 8 à 3 |
 | 12 — AWS préparé (sans apply) | 2026-11-17 13:20 | 2026-11-17 13:38 | 18 min (en parallèle des builds Jenkins) | 0,5 j | Terraform 5 tests simulés, ansible-lint, 16 tests des scripts, runbook |
 | 13 — Livrables finaux | 2026-11-17 13:38 | 2026-11-17 13:53 | 15 min | 0,5 j | SCENARIO-DEMO et PRESENTATION-PLAN à jour, vérification finale complète, tag v1.0.0 |
+| Sonar — fiabilité et hotspots | 2026-11-17 14:05 | 2026-11-17 14:43 | 38 min (dont 2 builds Jenkins d'environ 11 min) | — | bug corrigé avec test, hotspot revu Safe : fiabilité A, hotspots revus 100 % (A), quality gate OK |
 
 ## Phase 3 — CQRS Axon
 
@@ -198,6 +199,24 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   - `make newman` 0 échec, `make e2e` 13/13, `make newman-pannes` 5/5 lancé seul ;
   - `config-overrides/` vide, circuits CLOSED.
 - **Branches** : les branches de travail ont été renommées selon la convention `feature/EVT-xx-…` (EVT-55, 12, 13, 14, 16, 17).
+
+## Après la phase 13 — SonarQube : fiabilité D et hotspots non revus
+
+- **Début** : 14:05 — **fin** : 14:43 (fusion) — **durée réelle** : 38 min.
+- **Accès** : Sonar refuse l'accès anonyme, et je n'ai pas cherché de jeton sur le poste. Le pipeline, qui utilise l'identifiant Jenkins `sonar-token`, exporte maintenant les bugs et les hotspots (`rapports/sonar-*.json`, archivés) : diagnostic fait à partir du build 6.
+- **Diagnostic** :
+  1. **Bug** `java:S5783` (CRITICAL) dans `PannesSimuleesTest` : dans `assertThrows(Exception.class, …)`, deux appels pouvaient échouer (`getContentAsString`, `readTree`). Le test pouvait passer pour une mauvaise raison ;
+  2. **Hotspot** `java:S3752` (CSRF) sur `IndisponibleController` : le fallback accepte toutes les méthodes HTTP. Ce n'est pas un vrai risque : forward des routes, réponse 503 en lecture seule, ni session ni cookie.
+- **Corrections** :
+  - test précis (corps lu hors de la lambda, `JsonProcessingException`) ;
+  - `IndisponibleControllerTest` (5 méthodes, même 503, pas de cookie) pour étayer le verdict ;
+  - revue versionnée `ci/sonar-hotspots-revus.txt`, appliquée par `ci/revue-hotspots.sh` via `api/hotspots/change_status` (Safe, avec commentaire) ;
+  - THEORIE Q31.
+- **Vérifié** :
+  - 344 tests verts (339 + 5), seuil JaCoCo respecté ;
+  - script de revue testé avec un faux `curl` sur le rapport réel, ShellCheck ;
+  - **build 7** : 0 bug, `reliability_rating` 1.0 (**A**), `security_hotspots_reviewed` **100 %**, `security_review_rating` 1.0 (**A**), quality gate OK.
+- **Non modifié** : `main` reste sur `v1.0.0` ; ces correctifs sont sur `develop`.
 
 ## Périmètre révisé (2026-11-16, à la demande)
 

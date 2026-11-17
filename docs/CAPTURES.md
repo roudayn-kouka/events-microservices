@@ -155,6 +155,14 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [ ] **C90 — Trivy avant / après** : rapports `trivy-statistics-service.txt` du build 1 (18, dont 8 CRITICAL) et du dernier build (7, dont 3 CRITICAL) ; frontend 57 → 0.
 - [ ] **C91 — Tests dans Jenkins** : build → *Test Result*. Visible : 339 tests, 0 échec.
 
+### SonarQube : fiabilité et Security Hotspots (après la phase 13)
+
+- [ ] **C98 — Sonar, avant** : rapport `sonar-problemes.json` du build 6, ou capture de l'écran Sonar si tu l'as. Visible : 1 bug (fiabilité D), 1 hotspot, 0 % revu (E).
+- [ ] **C99 — Le bug et sa correction** : `PannesSimuleesTest` dans l'IDE. Visible : le corps lu hors de la lambda et `assertThrows(JsonProcessingException.class, …)`.
+- [ ] **C100 — Hotspot revu** : SonarQube → *Security Hotspots* → filtre « Safe ». Visible : `java:S3752` sur `IndisponibleController`, statut Safe, et le commentaire « Revue versionnée … ».
+- [ ] **C101 — Sonar, après** : http://localhost:9000/dashboard?id=events-microservices. Visible : Reliability **A** (0 bug), Security Review **A** (100 %), quality gate Passed.
+- [ ] **C102 — Journal du build 7** : étape « Quality gate ». Visible : « SAFE : java:S3752… », « 1 marqué(s) Safe, 0 restant(s) à revoir », puis `reliability_rating = 1.0` et `security_hotspots_reviewed = 100.0`.
+
 ### AWS préparé (phase 12)
 
 - [ ] **C92 — make aws-check** : terminal. Visible : « Success! 5 passed, 0 failed », « Passed: 0 failure(s) » (ansible-lint) et « Tous les tests de déploiement passent. ».
