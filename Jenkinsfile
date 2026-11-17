@@ -59,7 +59,7 @@ pipeline {
             steps {
                 // Tout le réacteur : les tests et le seuil JaCoCo (phase 10) protègent aussi les
                 // services qui dépendent d'un module modifié ; c'est aussi ce que Sonar analyse.
-                sh 'mvn -B -ntp verify'
+                sh 'mvn -B -ntp clean verify'   // clean : espace de travail persistant, sinon des JAR « à jour » gardent d'anciennes dépendances
             }
             post {
                 always {
