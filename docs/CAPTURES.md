@@ -85,48 +85,48 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 
 ### ⭐ CQRS Axon (phase 3)
 
-- [ ] **C44 — Axon Server** : `http://localhost:8024`. Visible : les 5 applications connectées, et les commandes d'event-service (A2).
-- [ ] **C45 — Event sourcing** : terminal, commande A3. Visible : l'historique numéroté d'un agrégat (`EventCreated`, `LogistiqueAffectee`, `EventCostUpdated`).
-- [ ] **C46 — Règle de l'agrégat** : terminal, commande A4. Visible : `204`, puis `404` sur la re-suppression, avec le message transporté par Axon Server.
-- [ ] **C47 — Tests de l'agrégat** : terminal, commande A11. Visible : les 16 tests Given / When / Then verts (IDE ou rapport Surefire).
-- [ ] **C48 — Projection de mon module** : terminal, commande A5, et `db_stats` dans MySQL (`SELECT * FROM token_entry`). Visible : processeur `statistiques` actif, tables remplies, jeton enregistré.
-- [ ] **C49 — Cohérence à terme** : terminal, commande A8. Visible : l'ancienne valeur, puis la nouvelle.
-- [ ] **C50 — APRÈS CQRS : source et latence** : terminal, commande A6. À placer à côté de C40.
-- [ ] **C51 — APRÈS CQRS : services d'écriture arrêtés** : terminal, commande A7 (et ST8). Visible : `200`. À placer à côté de C41.
-- [ ] **C52 — Replay** : terminal, commande A9. Visible : `202`, puis « identique ».
+- [x] **C44 — Axon Server** : `http://localhost:8024`. Visible : les 5 applications connectées, et les commandes d'event-service (A2).
+- [x] **C45 — Event sourcing** : terminal, commande A3. Visible : l'historique numéroté d'un agrégat (`EventCreated`, `LogistiqueAffectee`, `EventCostUpdated`).
+- [x] **C46 — Règle de l'agrégat** : terminal, commande A4. Visible : `204`, puis `404` sur la re-suppression, avec le message transporté par Axon Server.
+- [x] **C47 — Tests de l'agrégat** : terminal, commande A11. Visible : les 16 tests Given / When / Then verts (IDE ou rapport Surefire).
+- [x] **C48 — Projection de mon module** : terminal, commande A5, et `db_stats` dans MySQL (`SELECT * FROM token_entry`). Visible : processeur `statistiques` actif, tables remplies, jeton enregistré.
+- [x] **C49 — Cohérence à terme** : terminal, commande A8. Visible : l'ancienne valeur, puis la nouvelle.
+- [x] **C50 — APRÈS CQRS : source et latence** : terminal, commande A6. À placer à côté de C40.
+- [x] **C51 — APRÈS CQRS : services d'écriture arrêtés** : terminal, commande A7 (et ST8). Visible : `200`. À placer à côté de C41.
+- [x] **C52 — Replay** : terminal, commande A9. Visible : `202`, puis « identique ».
 
 ### Résilience4j et pannes (phase 4)
 
-- [ ] **C53 — Panne 1, disponibilité** : terminal, `make panne N=1`. Visible : le premier appel lent (3 tentatives), puis les appels refusés en 0,01 s, l'état **OPEN**, le 503 explicite, puis HALF_OPEN et CLOSED.
-- [ ] **C54 — Transitions du circuit** : terminal, commande R7, juste après C53. Visible : CLOSED_TO_OPEN, OPEN_TO_HALF_OPEN, HALF_OPEN_TO_CLOSED avec leurs heures.
-- [ ] **C55 — Panne 2, temps de réponse** : `make panne N=2`. Visible : `config-overrides` + `/actuator/refresh` → `["panne.latence-ms"]`, puis 504 « TimeLimiter ».
-- [ ] **C56 — Panne 3, réponse incorrecte** : `make panne N=3`. Visible : le JSON tronqué renvoyé en 200, puis 502 « réponse incorrecte, rejetée ».
-- [ ] **C57 — Panne 4, erreur réseau et correction à chaud** : `make panne N=4`. Visible : « injoignable (erreur réseau) après 3 tentatives », puis la correction par refresh et CLOSED.
-- [ ] **C58 — Panne 5, dépendance externe** : `make panne N=5`. Visible : santé `{"status":"DOWN","db":"DOWN"}`, circuit OPEN, puis UP et CLOSED.
-- [ ] **C59 — Fallback de la Gateway** : commande R9. Visible : 503 JSON « … indisponible (Gateway) » (à placer à côté du 500 de la phase 3).
-- [ ] **C60 — Configuration** : `config-repo/resilience-feign.yml` dans l'IDE. Visible : Retry 3 × 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s.
+- [x] **C53 — Panne 1, disponibilité** : terminal, `make panne N=1`. Visible : le premier appel lent (3 tentatives), puis les appels refusés en 0,01 s, l'état **OPEN**, le 503 explicite, puis HALF_OPEN et CLOSED.
+- [x] **C54 — Transitions du circuit** : terminal, commande R7, juste après C53. Visible : CLOSED_TO_OPEN, OPEN_TO_HALF_OPEN, HALF_OPEN_TO_CLOSED avec leurs heures.
+- [x] **C55 — Panne 2, temps de réponse** : `make panne N=2`. Visible : `config-overrides` + `/actuator/refresh` → `["panne.latence-ms"]`, puis 504 « TimeLimiter ».
+- [x] **C56 — Panne 3, réponse incorrecte** : `make panne N=3`. Visible : le JSON tronqué renvoyé en 200, puis 502 « réponse incorrecte, rejetée ».
+- [x] **C57 — Panne 4, erreur réseau et correction à chaud** : `make panne N=4`. Visible : « injoignable (erreur réseau) après 3 tentatives », puis la correction par refresh et CLOSED.
+- [x] **C58 — Panne 5, dépendance externe** : `make panne N=5`. Visible : santé `{"status":"DOWN","db":"DOWN"}`, circuit OPEN, puis UP et CLOSED.
+- [x] **C59 — Fallback de la Gateway** : commande R9. Visible : 503 JSON « … indisponible (Gateway) » (à placer à côté du 500 de la phase 3).
+- [x] **C60 — Configuration** : `config-repo/resilience-feign.yml` dans l'IDE. Visible : Retry 3 × 500 ms, RateLimiter 5/s, CircuitBreaker, TimeLimiter 5 s.
 
 ### Répartition de charge (phase 5)
 
-- [ ] **C61 — Eureka, 2 instances** : `http://localhost:8761`. Visible : `PARTICIPANT-SERVICE` et `STATISTICS-SERVICE` avec 2 instances UP chacun.
-- [ ] **C62 — Répartition 50 / 50** : `make repartition` (parties 1 et 2). Visible : 10 / 10 pour la Gateway et pour Feign.
-- [ ] **C63 — Bascule sans erreur** : `make repartition` (partie 3). Visible : 20 requêtes sur l'instance 1 quand l'instance 2 est arrêtée.
-- [ ] **C64 — Replay à 2 instances** : `make replay`. Visible : les 4 étapes, « identique à avant », et les 2 instances UP.
+- [x] **C61 — Eureka, 2 instances** : `http://localhost:8761`. Visible : `PARTICIPANT-SERVICE` et `STATISTICS-SERVICE` avec 2 instances UP chacun.
+- [x] **C62 — Répartition 50 / 50** : `make repartition` (parties 1 et 2). Visible : 10 / 10 pour la Gateway et pour Feign.
+- [x] **C63 — Bascule sans erreur** : `make repartition` (partie 3). Visible : 20 requêtes sur l'instance 1 quand l'instance 2 est arrêtée.
+- [x] **C64 — Replay à 2 instances** : `make replay`. Visible : les 4 étapes, « identique à avant », et les 2 instances UP.
 
 ### Observabilité (phase 6)
 
-- [ ] **C65 — Cibles Prometheus** : http://localhost:9091/targets. Visible : les cibles découvertes par Eureka, toutes UP, dont les 2es instances.
-- [ ] **C66 — Grafana, JVM et HTTP** : tableau de bord « Events — JVM et HTTP ». Visible : instances UP, débit, p95, mémoire par instance.
-- [ ] **C67 — Grafana, Resilience4j pendant une panne** : lancer `make panne N=1`. Visible : « Circuits ouverts » à 1, la courbe OPEN puis HALF_OPEN, les appels refusés.
-- [ ] **C68 — Grafana, métier et répartition** : « Events — Métier (statistics-service) ». Visible : indicateurs de mon module, et requêtes réparties entre les 2 instances.
-- [ ] **C69 — Trace Zipkin** : http://localhost:9411, rechercher `api-gateway`, ouvrir la trace de `/api/events/{id}/details`. Visible : gateway → event-service → participant-service et logistics-service.
-- [ ] **C70 — traceId dans les logs** : commande O6. Visible : le même traceId que dans Zipkin.
-- [ ] **C71 — Alertes** : http://localhost:9091/alerts pendant la commande O7. Visible : `CircuitOuvert` « firing ».
+- [x] **C65 — Cibles Prometheus** : http://localhost:9091/targets. Visible : les cibles découvertes par Eureka, toutes UP, dont les 2es instances.
+- [x] **C66 — Grafana, JVM et HTTP** : tableau de bord « Events — JVM et HTTP ». Visible : instances UP, débit, p95, mémoire par instance.
+- [x] **C67 — Grafana, Resilience4j pendant une panne** : lancer `make panne N=1`. Visible : « Circuits ouverts » à 1, la courbe OPEN puis HALF_OPEN, les appels refusés.
+- [x] **C68 — Grafana, métier et répartition** : « Events — Métier (statistics-service) ». Visible : indicateurs de mon module, et requêtes réparties entre les 2 instances.
+- [x] **C69 — Trace Zipkin** : http://localhost:9411, rechercher `api-gateway`, ouvrir la trace de `/api/events/{id}/details`. Visible : gateway → event-service → participant-service et logistics-service.
+- [x] **C70 — traceId dans les logs** : commande O6. Visible : le même traceId que dans Zipkin.
+- [x] **C71 — Alertes** : http://localhost:9091/alerts pendant la commande O7. Visible : `CircuitOuvert` « firing ».
 
 ### Swagger et Postman (phase 7)
 
-- [ ] **C72 — Swagger agrégé** : http://localhost:8088/swagger-ui.html. Visible : le sélecteur des 5 services, puis un « Try it out » réussi.
-- [ ] **C73 — Newman, collection complète** : `make newman`. Visible : 69 requêtes, 0 échec.
-- [ ] **C74 — Newman, 5 pannes** : `make newman-pannes`. Visible : les 5 dossiers verts et le bilan.
+- [x] **C72 — Swagger agrégé** : http://localhost:8088/swagger-ui.html. Visible : le sélecteur des 5 services, puis un « Try it out » réussi.
+- [x] **C73 — Newman, collection complète** : `make newman`. Visible : 69 requêtes, 0 échec.
+- [x] **C74 — Newman, 5 pannes** : `make newman-pannes`. Visible : les 5 dossiers verts et le bilan.
 
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._
