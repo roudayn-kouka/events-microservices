@@ -11,7 +11,7 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 10,,Epic,Documentation des API,"Swagger/OpenAPI agrégé dans la Gateway, collection Postman",High,swagger;postman,,Done
 11,,Epic,Sécurité Keycloak,"Realm events, rôles ADMIN/USER, Gateway resource server, propagation du JWT — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak;security,,Won't Do
 12,,Epic,Frontend Angular,"Frontend de feature/feedback étendu : participants, logistique, dashboard statistiques, Keycloak",Medium,angular,,Done
-13,,Epic,Qualité,"Handler global, validation, tests WireMock et AggregateTestFixture, JaCoCo >= 70 % sur statistics",High,quality;tests,,To Do
+13,,Epic,Qualité,"Handler global, validation, tests WireMock et AggregateTestFixture, JaCoCo >= 70 % sur statistics",High,quality;tests,,Done
 14,,Epic,CI/CD Jenkins,"Jenkinsfile multi-services, SonarQube et quality gate, Trivy, Docker, paramètres PUSH_IMAGES et DEPLOY_AWS",Medium,jenkins;sonarqube;trivy,,To Do
 15,,Epic,Docker Compose,"Healthchecks, depends_on conditionnels, profils core/observability/security/frontend/lite",High,docker,,To Do
 16,,Epic,AWS,"Cible A : EC2 + Docker Compose (Learner Lab), make aws-up / aws-down, rien n'est lancé avant rechargement",Low,aws;terraform;ansible,,To Do
@@ -70,9 +70,9 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 69,12,Story,Écrans participants et logistique,"Base Angular 20 de feature/feedback, écrans des autres features",Medium,angular,3,Done
 70,12,Story,Dashboard statistiques,Graphiques alimentés par statistics-service (mon module),High,angular;statistics,3,Done
 71,12,Task,Connexion Keycloak côté Angular,"Connexion, jeton envoyé à la Gateway, menus selon le rôle",Medium,angular;keycloak,2,Won't Do
-72,13,Story,Handler global et validation,"@RestControllerAdvice, DTO @Valid, erreurs normalisées",High,quality,2,To Do
-73,13,Task,Tests Feign avec WireMock,Clients Feign et fallbacks testés sans les autres services,High,tests,2,To Do
-74,13,Task,JaCoCo >= 70 % sur statistics-service,Seuil appliqué par mvn verify,High,tests;statistics,2,To Do
+72,13,Story,Handler global et validation,"@RestControllerAdvice, DTO @Valid, erreurs normalisées",High,quality,2,Done
+73,13,Task,Tests Feign avec WireMock,Clients Feign et fallbacks testés sans les autres services,High,tests,2,Won't Do
+74,13,Task,JaCoCo >= 70 % sur statistics-service,Seuil appliqué par mvn verify,High,tests;statistics,2,Done
 75,14,Story,Jenkinsfile multi-services,"Étapes parallèles, détection des services modifiés",Medium,jenkins,3,To Do
 76,75,Task,SonarQube et quality gate,Analyse par service sur le SonarQube de ~/devops,Medium,sonarqube,1,To Do
 77,75,Task,Scan Trivy,Images et dépendances,Medium,trivy,1,To Do
