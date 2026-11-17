@@ -38,7 +38,7 @@ echo "Quality gate « $PROJET » : $gate   ($SERVEUR/dashboard?id=$PROJET)"
 echo "$reponse" | tr '{' '\n' | grep -E '"metricKey"' | sed 's/^/  /' | cut -c1-160 || true
 
 # Mesures globales du projet (affichées dans le journal du build : Sonar refuse l'accès anonyme)
-mesures="coverage,bugs,reliability_rating,vulnerabilities,security_rating,security_hotspots,security_hotspots_reviewed,security_review_rating,code_smells,duplicated_lines_density,ncloc"
+mesures="coverage,bugs,reliability_rating,vulnerabilities,security_rating,security_hotspots,security_hotspots_reviewed,security_review_rating,code_smells,sqale_rating,duplicated_lines_density,ncloc,tests"
 sleep 10   # laisser Sonar recalculer les mesures après la revue des hotspots
 reponse=$(curl -s -u "$SONAR_TOKEN:" "$SERVEUR/api/measures/component?component=$PROJET&metricKeys=$mesures")
 echo "Mesures du projet :"
