@@ -255,6 +255,18 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Piège** : `mvn verify` sans `clean` gardait les anciennes bibliothèques dans le JAR, qui était « à jour » aux yeux de Maven. Le pipeline fait désormais `mvn clean verify`.
 - **Non corrigé, et pourquoi** : Spring Framework 6.2 n'a de correctif qu'en 7.x, donc Spring Boot 4, incompatible avec Axon 4 (Q2). BouncyCastle et Guava sont des dépendances transitives de Spring Cloud et de gRPC/Axon : forcer leur version sans tests d'intégration dédiés serait risqué. Le paramètre `TRIVY_BLOQUANT` fait échouer le build sur les CRITICAL corrigeables. Il est désactivé tant que ces trois-là ne peuvent pas l'être.
 
+### Q31. Que signalait SonarQube (bug, Security Hotspots), et comment l'avez-vous traité ?
+
+- **Le bug (fiabilité D)** : `java:S5783` dans `PannesSimuleesTest`. La lambda de `assertThrows(Exception.class, …)` appelait deux méthodes qui peuvent échouer : `getContentAsString()` et `readTree()`. Le test pouvait donc passer pour une **mauvaise raison** (une erreur d'encodage) sans prouver que le JSON était illisible. **Correction** : le corps est lu hors de la lambda, et l'exception attendue est précise (`JsonProcessingException`). Le test ne peut plus passer que par l'échec de lecture du JSON corrompu.
+- **Security Hotspots revus** (100 %) :
+
+| Règle | Fichier | Verdict | Justification |
+|---|---|---|---|
+| `java:S3752` (CSRF : méthodes sûres et non sûres acceptées) | `api-gateway/…/IndisponibleController.java` | **Safe** | Fallback de la Gateway : il doit accepter toutes les méthodes, car les routes y redirigent (forward) les GET, POST, PUT et DELETE. Il répond 503 en JSON, en lecture seule, sans effet de bord, ni session, ni cookie : il n'y a aucune action à déclencher par CSRF. Prouvé par `IndisponibleControllerTest` (5 méthodes, même 503, pas de `Set-Cookie`). |
+
+- **Revue versionnée** : chaque verdict est écrit dans `ci/sonar-hotspots-revus.txt` (règle, fichier, justification). Après chaque analyse, le pipeline (`ci/revue-hotspots.sh`) marque « Reviewed / Safe » par l'API Sonar (`api/hotspots/change_status`), avec la justification en commentaire. La revue est donc tracée dans Git et reproductible. Un **nouveau** hotspot non listé reste « To review » et apparaît dans le journal du build.
+- **Limite assumée** : la correspondance se fait sur la règle et le fichier. Si ce fichier change beaucoup, il faut relire la justification. Le hotspot CORS du type « autoriser localhost:4200 » n'est pas signalé ici : la configuration CORS est en YAML (`allowed-origins`), que Sonar n'analyse pas comme du code Java.
+
 ## Sécurité (non implémentée : choix de périmètre)
 
 ### Q19. Comment sécuriseriez-vous la Gateway et les services ?

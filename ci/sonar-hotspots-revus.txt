@@ -1,0 +1,7 @@
+# Revue des Security Hotspots SonarQube, versionnée (THEORIE Q31).
+# Format : règle|fichier (chemin dans le dépôt)|justification
+# Le pipeline (ci/revue-hotspots.sh) marque « Reviewed / Safe », avec la justification en commentaire,
+# chaque hotspot « To review » qui correspond à une ligne (même règle, même fichier).
+# Un hotspot qui n'est pas listé ici reste « To review » : il doit être revu, puis corrigé ou ajouté ici.
+# Revue : Roudayna Kouka, 2026-11-17.
+java:S3752|api-gateway/src/main/java/tn/fst/events/gateway/IndisponibleController.java|Fallback de la Gateway : toutes les méthodes HTTP sont acceptées car les routes y redirigent (forward) GET, POST, PUT et DELETE. Réponse 503 JSON en lecture seule, sans effet de bord, sans session ni cookie : aucune action à déclencher par CSRF. Prouvé par IndisponibleControllerTest.
