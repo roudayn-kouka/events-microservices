@@ -47,7 +47,7 @@
              Non corrigées ici (ETAT-FINAL, phase 11) : Spring Framework (correctif seulement en 7.x,
              donc Boot 4, incompatible avec Axon 4) ; Guava et BouncyCastle (transitives d'Axon/gRPC
              et de Spring Cloud). -->
-        <tomcat.version>10.1.56</tomcat.version>
+        <tomcat.version>10.1.59</tomcat.version>
         <jackson-bom.version>2.21.7</jackson-bom.version>
         <netty.version>4.1.137.Final</netty.version>
         <!-- Spring Cloud 2025.0 (Northfields) : appairage officiel de Spring Boot 3.5 -->
