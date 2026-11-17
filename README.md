@@ -33,7 +33,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). État final : [docs/ETAT-FINAL.m
 | [COMMANDES](docs/COMMANDES.md) | Toutes les commandes, par technologie, avec le résultat attendu |
 | [CAPTURES](docs/CAPTURES.md) | Liste des captures d'écran (C1 à C97) |
 | [SCENARIO-DEMO](docs/SCENARIO-DEMO.md) | Démonstration de 10 minutes, préparation et plans de secours |
-| [THEORIE](docs/THEORIE.md) | Questions du jury et réponses (Q1 à Q30) |
+| [THEORIE](docs/THEORIE.md) | Questions du jury et réponses (Q1 à Q31) |
 | [PRESENTATION-PLAN](docs/PRESENTATION-PLAN.md) | Plan des slides, avec extraits AVANT / APRÈS |
 | [ETAT-FINAL](docs/ETAT-FINAL.md) | Ce qui est fait et testé, ce qui reste |
 | [APRES-PUSH](docs/APRES-PUSH.md) | Publication GitHub, webhook Jenkins, Docker Hub |
