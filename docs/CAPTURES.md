@@ -153,7 +153,7 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [x] **C88 — SonarQube** : http://localhost:9000/dashboard?id=events-microservices. Visible : quality gate « Passed », couverture, bugs et vulnérabilités.
 - [x] **C89 — Quality gate dans Jenkins** : journal, étape « Quality gate ». Visible : « Quality gate « events-microservices » : OK » et les mesures.
 - [x] **C90 — Trivy avant / après** : rapports `trivy-statistics-service.txt` du build 1 (18, dont 8 CRITICAL) et du dernier build (7, dont 3 CRITICAL) ; frontend 57 → 0.
-- [x] **C91 — Tests dans Jenkins** : build → *Test Result*. Visible : 339 tests, 0 échec.
+- [x] **C91 — Tests dans Jenkins** : build → *Test Result*. Visible : 344 tests, 0 échec (339 avant le correctif Sonar).
 
 ### SonarQube : fiabilité et Security Hotspots (après la phase 13)
 
@@ -170,6 +170,7 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 
 ### Après le push et sur AWS (quand ce sera fait)
 
+- [ ] **C103 — GitHub for Jira** : ticket **EVT-76** → panneau *Développement*. Visible : les commits du correctif Sonar et la branche `fix/EVT-76-…`, avec le lien vers GitHub (APRES-PUSH.md, section 3).
 - [ ] **C94 — Webhook GitHub** : *Recent Deliveries* en 200, et le build déclenché (APRES-PUSH.md, section 2).
 - [ ] **C95 — Plan Terraform et confirmation** : `make aws-up`, le plan puis la question « Taper « oui » ».
 - [ ] **C96 — Démonstration sur AWS** : frontend `http://<IP>:4200` et Newman avec `aws.postman_environment.json`.

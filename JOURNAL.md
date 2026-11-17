@@ -19,6 +19,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 12 — AWS préparé (sans apply) | 2026-11-17 13:20 | 2026-11-17 13:38 | 18 min (en parallèle des builds Jenkins) | 0,5 j | Terraform 5 tests simulés, ansible-lint, 16 tests des scripts, runbook |
 | 13 — Livrables finaux | 2026-11-17 13:38 | 2026-11-17 13:53 | 15 min | 0,5 j | SCENARIO-DEMO et PRESENTATION-PLAN à jour, vérification finale complète, tag v1.0.0 |
 | Sonar — fiabilité et hotspots | 2026-11-17 14:05 | 2026-11-17 14:43 | 38 min (dont 2 builds Jenkins d'environ 11 min) | — | bug corrigé avec test, hotspot revu Safe : fiabilité A, hotspots revus 100 % (A), quality gate OK |
+| Préparation du push, release v1.0.1 | 2026-11-17 14:50 | 2026-11-17 15:30 | 40 min (hors interruption) | — | captures cochées, chiffres harmonisés, contrôles du push verts, tag v1.0.1 sur main |
 
 ## Phase 3 — CQRS Axon
 
@@ -217,6 +218,28 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   - script de revue testé avec un faux `curl` sur le rapport réel, ShellCheck ;
   - **build 7** : 0 bug, `reliability_rating` 1.0 (**A**), `security_hotspots_reviewed` **100 %**, `security_review_rating` 1.0 (**A**), quality gate OK.
 - **Non modifié** : `main` reste sur `v1.0.0` ; ces correctifs sont sur `develop`.
+
+## Préparation du push et release v1.0.1 (état final)
+
+- **Début** : 14:50 — **fin** : 15:30. La session a été interrompue par la limite d'usage, puis reprise au point noté.
+- **Captures** :
+  - C1 à C93 et C101 cochées ;
+  - restent C94 (webhook GitHub, impossible avant le push), C95 à C97 (déploiement AWS), C98 à C100 et C102 (Sonar avant correction, le bug, le hotspot, le journal du build) et C103 (GitHub for Jira, après le push).
+- **Jira** : `jira/README.md` documente l'import (EVT-1 à EVT-89, tâches importées comme Sous-tâches). 15 tâches ont directement une Epic pour parent : leur rattachement est à vérifier dans Jira.
+- **Cohérence** : un bloc « Résultats finaux » identique dans README, ETAT-FINAL et PRESENTATION-PLAN, plus THEORIE Q31 :
+  - 344 tests ; Newman 69 requêtes et 137 assertions ;
+  - Sonar (build 9) : 0 bug, fiabilité, sécurité et maintenabilité A, hotspots revus 100 %, couverture 77,7 %, duplication 0,7 % ;
+  - Trivy 6 à 8 par service Java, 0 pour le frontend.
+  - Écarts corrigés : C91 (339 → 344), slide 18 (339 → 344), COMMANDES N2 (64/122 → 69/137) et CI8 (Trivy par service). Les chiffres datés des phases passées sont conservés.
+- **APRES-PUSH** : section « GitHub for Jira » (capture C103) ; push de toutes les branches et de tous les tags.
+- **Pipeline** : la note de maintenabilité et le nombre de tests figurent dans le journal du build.
+- **Contrôles avant le push** :
+  - aucun secret versionné : `.env` est ignoré, `.env.example` ne contient que `change-me`, la seule clé versionnée est une clé **publique** de test Terraform ;
+  - aucun secret dans l'historique : recherche de clés privées, de clés AWS et de jetons Sonar, GitHub et Slack, et d'affectations de mots de passe ; seulement des faux positifs (noms d'identifiants Jenkins, `http_tokens`, `js-tokens`) ;
+  - `mvn clean verify` : 344 tests, 0 échec, 5 seuils JaCoCo respectés ;
+  - `make health` et `make newman` (69 requêtes, 137 assertions) verts ;
+  - aucune mention de Claude dans les commits ; aucun remote ; `git status` vide après la release.
+- **Release** : `develop` fusionnée dans `main` (`--no-ff`) ; tag `v1.0.1`.
 
 ## Périmètre révisé (2026-11-16, à la demande)
 

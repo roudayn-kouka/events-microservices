@@ -167,7 +167,7 @@ Variable utile : `S=http://localhost:8088/api/stats`. `$EV` est un événement n
 | # | Commande | Rôle | Résultat |
 |---|---|---|---|
 | N1 | `python3 postman/generate.py` | Régénérer la collection et les environnements (local, AWS) | `postman/*.json` |
-| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | les 5 services (CQRS compris) : 64 requêtes, 122 assertions, 0 échec |
+| N2 | `docker run --rm --network host -v "$PWD/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json` | Exécuter toute la collection en ligne de commande (Newman) | les 5 services (CQRS compris) : 69 requêtes, 137 assertions (64 et 122 à la phase 3), 0 échec |
 | N3 | Postman → *Import* → `postman/events-microservices.postman_collection.json` et `postman/local.postman_environment.json` | Utiliser la collection dans Postman | Un dossier par service, avec le tableau des correspondances d'endpoints |
 
 ## Feign
@@ -287,7 +287,7 @@ _Retiré du périmètre (2026-11-16) : voir THEORIE Q19._
 | CI5 | http://localhost:8080/job/events-microservices/ | Vue des étapes (Stage View) | étapes vertes, Push et AWS « skipped » |
 | CI6 | `bash ci/changements.sh 3eed6b6 /tmp/c.properties 08e7cb8` | Détection des changements sur un commit qui ne touche que le frontend | `SERVICES=frontend`, `JAVA=false` |
 | CI7 | http://localhost:9000/dashboard?id=events-microservices | Projet SonarQube | quality gate « Passed », couverture importée de JaCoCo |
-| CI8 | Job → build → *Artifacts* → `rapports/trivy-*.txt` | Rapports Trivy de chaque image | `Total: 7 (HIGH: 4, CRITICAL: 3)` (services), `0` (frontend) |
+| CI8 | Job → build → *Artifacts* → `rapports/trivy-*.txt` | Rapports Trivy de chaque image | services Java : `Total: 6` à `8` (3 ou 4 CRITICAL, statistics-service : `Total: 7 (HIGH: 4, CRITICAL: 3)`) ; frontend : `0` |
 | CI9 | *Build with Parameters* | Paramètres | `PUSH_IMAGES`, `DEPLOY_AWS`, `TRIVY_BLOQUANT` décochés par défaut |
 
 ## Terraform · Ansible · AWS (à exécuter après rechargement)

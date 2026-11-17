@@ -229,6 +229,18 @@ Sonar : la couverture JaCoCo des 5 services métier est importée ; Gateway, Con
 
 `make aws-check` : Terraform fmt et validate ; `terraform test` 5/5 (fournisseur simulé) ; Ansible `--syntax-check` et `ansible-lint` (production, 0 échec) ; ShellCheck sur tous les scripts ; 16/16 tests des scripts de déploiement. Aucun appel AWS, aucun `apply`.
 
+## Résultats finaux (référence pour tous les livrables)
+
+| Indicateur | Résultat final (build Jenkins n° 9, commit `d910ee1`, 2026-11-17) |
+|---|---|
+| Tests | **344** verts (`mvn clean verify`, comptés aussi par Sonar) ; seuil JaCoCo respecté dans les 5 services (statistics-service : 97,7 % des lignes) |
+| Postman / Newman | **69** requêtes, **137** assertions, 0 échec ; `make newman-pannes` : 5 pannes sur 5 |
+| Frontend | 10 tests Vitest ; `make e2e` : 13 contrôles dans Chromium |
+| SonarQube | quality gate **Passed** ; 0 bug, fiabilité **A** ; 0 vulnérabilité, sécurité **A** ; 26 code smells, maintenabilité **A** ; couverture **77,7 %** ; duplication **0,7 %** ; 4 356 lignes de code |
+| Security Hotspots | 1 seul, revu à **100 %** (**A**) : `java:S3752` (CSRF) sur le fallback `IndisponibleController`, **Safe**, car il accepte toutes les méthodes pour les forward des routes, répond 503 en lecture seule, sans session ni cookie (THEORIE Q31) |
+| Trivy (HIGH + CRITICAL corrigeables) | services Java : 6 à 8 (3 CRITICAL, 4 pour eureka-server), dont statistics-service 7 (contre 18 au build 1) ; frontend 0 (contre 57) |
+| Jenkins | builds 1 à 9 en SUCCESS ; Push et AWS désactivés par défaut |
+
 ## Vérification finale (phase 13, 2026-11-17, stack complète, profil core)
 
 | Contrôle | Résultat |
@@ -239,8 +251,8 @@ Sonar : la couverture JaCoCo des 5 services métier est importée ; Gateway, Con
 | `make newman-pannes` | 5 scénarios vérifiés et rétablis (et 3 passages consécutifs après le correctif du cron) |
 | `make e2e` | 13 contrôles `OK` dans Chromium |
 | `make aws-check` | Terraform 5/5, ansible-lint 0 échec, ShellCheck, 16/16 tests des scripts |
-| Jenkins `events-microservices` | builds 1 à 7 en SUCCESS (5 : documentation seule, tout sauté en 3 s) |
-| SonarQube (build 7) | 0 bug, fiabilité A, sécurité A, hotspots revus 100 % (A), couverture 77,7 %, quality gate OK |
+| Jenkins `events-microservices` | builds 1 à 9 en SUCCESS (5 et 8 : documentation seule, tout sauté) |
+| SonarQube (build 9) | 0 bug, fiabilité A, sécurité A, maintenabilité A, hotspots revus 100 % (A), couverture 77,7 %, duplication 0,7 %, quality gate OK |
 | Après les tests | `config-overrides/` vide (README seul), tous les circuits CLOSED |
 
 ## État des conteneurs laissé en place
