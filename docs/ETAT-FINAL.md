@@ -213,3 +213,26 @@ Règle dans le POM parent (`jacoco:check` à la phase `verify`, `haltOnFailure`)
 Preuve que le seuil est bloquant : `mvn -pl statistics-service -am verify -Djacoco.minimum.lignes=0.99` donne `BUILD FAILURE` (« lines covered ratio is 0.97, but expected minimum is 0.99 »).
 Le handler d'exceptions global (`common`) et les DTO `@Valid` existent depuis les phases 2 et 4 (ticket 72). Les tests WireMock (ticket 73) ne sont pas faits : les clients Feign sont testés par un faux service distant (`ClientsResilientsTest`) et, en réel, par les 5 pannes vérifiées par Newman.
 
+## Phase 11 — Pipeline Jenkins : vérifications
+
+| Build | Déclenchement | Résultat | Durée | Remarque |
+|---|---|---|---|---|
+| 1 | scrutation (premier build, tout reconstruit) | SUCCESS | 11 min | tests 339, quality gate OK, 9 images ; Trivy statistics-service 18 (8 CRITICAL), frontend 57 |
+| 2 | scrutation (POM modifié → tout) | SUCCESS | ≈ 11 min | Tomcat 10.1.56, Jackson, Netty, `apk upgrade` : frontend 0 |
+| 3 | scrutation (POM modifié → tout) | SUCCESS | ≈ 11 min | Tomcat 10.1.59 : statistics-service 7 (3 CRITICAL) |
+
+Trivy, dernier build : services Java 6 à 8 vulnérabilités (3 à 4 CRITICAL), frontend 0. Restent Spring Framework 6.2 (correctif seulement en 7.x), BouncyCastle 1.80 et Guava (transitives) ; justification dans THEORIE Q30.
+Sonar : la couverture JaCoCo des 5 services métier est importée ; Gateway, Config, Eureka et `common` n'ont pas de rapport JaCoCo.
+
+## Phase 12 — AWS : vérifications sans AWS
+
+`make aws-check` : Terraform fmt et validate ; `terraform test` 5/5 (fournisseur simulé) ; Ansible `--syntax-check` et `ansible-lint` (production, 0 échec) ; ShellCheck sur tous les scripts ; 16/16 tests des scripts de déploiement. Aucun appel AWS, aucun `apply`.
+
+## Ce qui reste à faire par l'utilisatrice
+
+| Quoi | Où |
+|---|---|
+| Captures (C1 à C43 des phases 0 à 2, C75 et suivantes) | `docs/CAPTURES.md` |
+| Publier le dépôt, webhook GitHub, push Docker Hub (facultatif) | `docs/APRES-PUSH.md` |
+| Déploiement AWS (Learner Lab démarré), puis destruction | `docs/AWS-RUNBOOK.md` |
+
