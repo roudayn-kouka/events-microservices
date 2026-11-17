@@ -1,0 +1,9 @@
+---
+# Phase 12 : préparation de l'EC2 (Ubuntu 24.04) pour la stack events-microservices.
+# Docker et Compose, swap, dossier de déploiement. Le code est envoyé ensuite par rsync (deployer.sh).
+- name: Préparer l'hôte Docker de la démonstration
+  hosts: events
+  become: true
+  gather_facts: true
+  roles:
+    - hote

@@ -15,6 +15,8 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | Correctif — circuit du cron | 2026-11-17 11:40 | 2026-11-17 12:35 | 55 min | — | circuit `participant-service-batch` pour le cron, 3 × `newman-pannes` verts |
 | 9 — Frontend Angular (allégé) | 2026-11-17 12:37 | 2026-11-17 12:48 | 11 min (+ ~25 min préparées pendant les runs Newman) | 0,5 à 1 j | 5 écrans via la Gateway, graphiques SVG, `make e2e` 13/13 |
 | 10 — Seuil JaCoCo bloquant | 2026-11-17 12:48 | 2026-11-17 12:53 | 5 min | 0,5 j (réduite à un commit) | `jacoco:check` lignes ≥ 70 %, branches ≥ 60 %, preuve du blocage |
+| 11 — Pipeline Jenkins, Sonar, Trivy | 2026-11-17 12:53 | 2026-11-17 13:36 | 43 min | 1 j | job local `events-microservices`, 3 builds verts, CVE CRITICAL de 8 à 3 |
+| 12 — AWS préparé (sans apply) | 2026-11-17 13:10 | 2026-11-17 13:42 | 32 min (en parallèle des builds Jenkins) | 0,5 j | Terraform 5 tests simulés, ansible-lint, 16 tests des scripts, runbook |
 
 ## Phase 3 — CQRS Axon
 
@@ -128,6 +130,58 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 - **Vérifié** : `mvn verify` vert, 5 × « All coverage checks have been met » ; avec un seuil de 99 %, statistics-service échoue (`BUILD FAILURE`, 0,97 < 0,99) ; `make health` vert.
 - **Tickets** : 72 (handler global et `@Valid`, déjà en place) et 74 « Done » ; 73 (WireMock) « Won't Do », justification dans ETAT-FINAL.
 - **Tags** : `v0.6.0` posé après coup sur la fusion de la phase 6 (le plan le prévoyait, il manquait) et `v0.10.0` sur cette fusion.
+
+## Phase 11 — Pipeline Jenkins, SonarQube, Trivy (accord donné le 2026-11-17)
+
+- **Début** : 12:53 — **fin** : 13:36 (fusion) — **durée réelle** : 43 min, dont 3 builds complets d'environ 11 min.
+- **`~/devops`, ce qui a été fait** :
+  - lu en lecture seule ;
+  - `docker start` de `jenkins` et `sonarqube` (Nexus n'a pas été démarré, inutile ici) ;
+  - un **nouveau** job, `events-microservices`, ajouté dans `jenkins_home`, et redémarrage de Jenkins pour le charger.
+- **`~/devops`, ce qui n'a pas été touché** : aucun conteneur, volume ou job supprimé ni modifié. Les jobs `TestAWSCredentials` et `docker-spring-boot-pipeline` sont intacts.
+- **Dépôt local sans push** : le conteneur Jenkins n'a pas de montage vers `~/events-microservices`, et le recréer était interdit. J'ai donc lancé un conteneur `events-git` (git daemon, dépôt monté en `:ro`, réseau `devops_default`) : Jenkins clone `git://events-git/events-microservices`. `file://` est bloqué par le plugin Git.
+- **Identifiants** : aucun mot de passe nécessaire.
+  - le job a été créé par fichier et le premier build a été déclenché par la scrutation ;
+  - Sonar utilise l'identifiant Jenkins existant `sonar-token`, celui du job de l'équipe, sans jamais l'afficher.
+- **Mémoire** : la pile events est passée en profil lite pendant les analyses (environ 6 Go libres sur 19).
+- **Fait** :
+  - `Jenkinsfile` avec détection des changements (`ci/changements.sh`), étapes parallèles (Sonar et frontend ; une branche par image avec Trivy), quality gate par l'API (`ci/quality-gate.sh`), JUnit et rapports archivés ;
+  - `PUSH_IMAGES`, `DEPLOY_AWS` et `TRIVY_BLOQUANT` à `false` ;
+  - webhook GitHub préparé en commentaire et documenté (APRES-PUSH.md).
+- **Problèmes et corrections** :
+  1. `alpine/git` n'inclut pas `git-daemon` (conteneur en boucle de redémarrage) : image dédiée `ci/git-daemon` ;
+  2. `readProperties` demande un plugin absent (Pipeline Utility Steps) : lecture par `sed` ;
+  3. **Trivy, build 1** : 17 à 19 vulnérabilités HIGH et CRITICAL par service, toutes dans les bibliothèques des JAR, et 57 dans l'image nginx. Montées de patch (Tomcat 10.1.59, Jackson 2.21.7, Netty 4.1.137) et `apk upgrade` : statistics-service passe de 18 à 7 (CRITICAL de 8 à 3), le frontend de 57 à 0 ;
+  4. la première montée n'a eu **aucun effet** : sans `clean`, Maven jugeait le JAR à jour et gardait les anciennes bibliothèques. Diagnostic par `unzip -l`, puis `mvn clean verify` partout, y compris dans le pipeline ;
+  5. Tomcat 10.1.58, cité par la base Trivy, n'est pas publié sur Maven Central : 10.1.59 ;
+  6. la ligne de résumé Trivy était vide pour une image sans vulnérabilité : `grep -m1 … || echo`.
+- **Vérifié** :
+  - builds 1, 2 et 3 en SUCCESS : 339 tests, seuil JaCoCo, quality gate Sonar OK, 9 images, 9 rapports Trivy ;
+  - détection des changements testée (frontend seul → `SERVICES=frontend`) ;
+  - `make health` vert (profil lite) et `make newman` sans échec après la montée des versions.
+- **Non corrigé (documenté, THEORIE Q30)** : Spring 6.2 (correctif en 7.x seulement, incompatible avec Axon 4), BouncyCastle, Guava et httpcore5 (transitives ou montée mineure).
+- **Rien à demander** : aucun mot de passe ni jeton manquant.
+
+## Phase 12 — AWS préparé, sans apply
+
+- **Début** : 13:10 (pendant les builds Jenkins) — **fin** : 13:42 — **durée réelle** : 32 min.
+- **Fait** :
+  - `infra/aws/terraform` : VPC, sous-réseau public, security group limité à `admin_cidr`, EC2 avec `LabInstanceProfile`, IMDSv2, disque gp3 chiffré, IP élastique ;
+  - `infra/aws/ansible` : Docker, Compose, swap, dossier ;
+  - `deployer.sh` (plan → confirmation → apply → Ansible → rsync → compose lite → tests de fumée) et `detruire.sh` ;
+  - `make aws-check`, `aws-up`, `aws-down` ; `docs/AWS-RUNBOOK.md`.
+- **Problèmes et corrections** :
+  1. **`terraform test` a trouvé un vrai bug** que seul un `apply` aurait révélé : AWS refuse les accents dans les descriptions de security group. Les descriptions sont passées en ASCII ;
+  2. une assertion comparait une `list` à un tuple (toujours faux) : `contains` et `length` ;
+  3. ShellCheck : `source` non suivi (SC1091) : `-x -P SCRIPTDIR`.
+- **Vérifié** (`make aws-check`, vert) :
+  - `terraform fmt` et `validate` ;
+  - `terraform test` : 5 runs sur un fournisseur simulé (instance du lab, disque chiffré, IMDSv2, accès limité à `admin_cidr`, refus de `0.0.0.0/0` et des types hors lab) ;
+  - Ansible : `--syntax-check` et `ansible-lint` (profil production, 0 échec) ;
+  - ShellCheck ;
+  - 16 tests des scripts avec de faux `aws`, `terraform`, `ssh` et `rsync` (ordre des étapes, confirmation obligatoire, arrêt sans identifiants, mode à blanc, destruction confirmée) ;
+  - filtre `rsync` vérifié à blanc : 10 JAR et `.git` envoyés, ni `.env` ni `node_modules`.
+- **Non fait, volontairement** : aucun `terraform apply` ni appel AWS. Le playbook n'a pas été rejoué dans un conteneur Ubuntu (Docker dans Docker, sans systemd) : son exécution réelle est dans le runbook.
 
 ## Périmètre révisé (2026-11-16, à la demande)
 

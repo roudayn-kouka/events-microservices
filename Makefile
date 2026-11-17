@@ -8,7 +8,7 @@ BRANCHE   := $(shell git branch --show-current)
 PROFILES  ?= --profile core
 
 .DEFAULT_GOAL := help
-.PHONY: help env build up restart down ps logs health seed panne repartition replay newman newman-pannes front-test e2e
+.PHONY: help env build up restart down ps logs health seed panne repartition replay newman newman-pannes front-test e2e aws-check aws-up aws-down
 
 help: ## Liste des commandes
 	@awk -F ':.*## ' '/^[a-z-]+:.*## / { printf "  make %-8s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -69,3 +69,21 @@ e2e: ## Frontend : parcours complet dans Chromium (Playwright), captures dans fr
 	docker run --rm --network host --user $$(id -u):$$(id -g) -e HOME=/tmp -v "$(CURDIR)/frontend/e2e:/e2e" \
 	  -v "$(CURDIR)/frontend/e2e/captures:/shots" -w /e2e mcr.microsoft.com/playwright:v1.55.0-noble \
 	  sh -c "test -d node_modules/playwright || (npm init -y >/dev/null && npm i playwright@1.55.0 --no-audit --no-fund >/dev/null); node parcours.mjs /shots"
+
+aws-check: ## AWS sans rien créer : terraform fmt/validate/test (fournisseur simulé), Ansible, ShellCheck, tests des scripts
+	terraform -chdir=infra/aws/terraform fmt -check -recursive
+	terraform -chdir=infra/aws/terraform init -backend=false -input=false >/dev/null
+	terraform -chdir=infra/aws/terraform validate
+	terraform -chdir=infra/aws/terraform test
+	cd infra/aws/ansible && ANSIBLE_CONFIG=ansible.cfg ansible-playbook -i inventory.ini.example site.yml --syntax-check
+	docker run --rm -v "$(CURDIR)/infra/aws/ansible:/w" -w /w python:3.12-slim sh -c \
+	  "pip install -q --root-user-action=ignore ansible-lint==25.9.2 >/dev/null 2>&1 && ansible-galaxy collection install -r requirements.yml >/dev/null 2>&1 && ANSIBLE_INVENTORY=inventory.ini.example ansible-lint site.yml"
+	docker run --rm -v "$(CURDIR):/mnt" -w /mnt koalaman/shellcheck:stable -x -P SCRIPTDIR \
+	  infra/aws/*.sh infra/aws/tests/*.sh ci/*.sh scripts/*.sh scripts/pannes/*.sh
+	bash infra/aws/tests/test-deployer.sh
+
+aws-up: ## Déploie sur AWS (plan affiché, confirmation, apply, Ansible, rsync, compose) : docs/AWS-RUNBOOK.md
+	@bash infra/aws/deployer.sh
+
+aws-down: ## Détruit l'EC2 et son réseau (confirmation « détruire »)
+	@bash infra/aws/detruire.sh

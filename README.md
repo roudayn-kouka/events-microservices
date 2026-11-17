@@ -22,6 +22,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 | 9 | Angular 20 allégé : statistiques (graphiques SVG), événements, participants, logistique, avis, via la Gateway | Terminée |
 | 10 | Seuil JaCoCo bloquant dans `mvn verify` (lignes ≥ 70 %, branches ≥ 60 %) | Terminée |
 | 11 | Pipeline Jenkins (job local `events-microservices`) : détection des changements, Sonar et quality gate, Trivy, étapes parallèles ; push et AWS désactivés | Terminée |
+| 12 | AWS préparé sans rien créer : Terraform (EC2, tests simulés), Ansible, `make aws-up` / `aws-down`, AWS-RUNBOOK | Terminée (déploiement à lancer : AWS-RUNBOOK.md) |
 
 ## Prérequis
 
@@ -40,6 +41,7 @@ make panne N=1   # scénario de panne 1 à 5, rétabli automatiquement (scripts/
 make repartition # répartition de charge entre les 2 instances (Gateway, Feign, bascule)
 make replay      # replay de la projection CQRS (2 instances de statistics-service)
 make front-test  # frontend : tests Vitest et build (node:22)
+make aws-check   # AWS : Terraform, Ansible, scripts vérifiés sans rien créer
 make e2e         # frontend : parcours complet dans Chromium (Playwright)
 make down     # arrêt (données conservées)
 ```

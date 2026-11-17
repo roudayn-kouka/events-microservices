@@ -1,0 +1,58 @@
+---
+- name: Installer Docker, Compose et les outils (paquets Ubuntu)
+  ansible.builtin.apt:
+    name: "{{ hote_paquets }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Démarrer Docker au boot
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Autoriser l'utilisateur à utiliser Docker
+  ansible.builtin.user:
+    name: "{{ hote_utilisateur }}"
+    groups: docker
+    append: true
+
+- name: Créer le fichier de swap
+  ansible.builtin.command: "fallocate -l {{ hote_swap_go }}G /swapfile"
+  args:
+    creates: /swapfile
+  notify: Activer le swap
+
+- name: Droits du fichier de swap
+  ansible.builtin.file:
+    path: /swapfile
+    mode: "0600"
+
+- name: Swap déclaré dans fstab
+  ansible.posix.mount:
+    name: none
+    src: /swapfile
+    fstype: swap
+    opts: sw
+    state: present
+
+- name: Limiter l'usage du swap (vm.swappiness)
+  ansible.posix.sysctl:
+    name: vm.swappiness
+    value: "10"
+    state: present
+
+- name: Dossier de déploiement
+  ansible.builtin.file:
+    path: "{{ hote_dossier }}"
+    state: directory
+    owner: "{{ hote_utilisateur }}"
+    group: "{{ hote_utilisateur }}"
+    mode: "0755"
+
+- name: Git accepte le dépôt envoyé par rsync (lu par le Config Server)
+  community.general.git_config:
+    name: safe.directory
+    value: "{{ hote_dossier }}"
+    scope: system
