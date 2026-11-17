@@ -1,7 +1,7 @@
 # =============================================================================
 #  Events — microservices Spring Cloud : stack locale
 #  Profils :  core (stack complète)  · lite (une instance par service, dev/AWS)
-#             observability · security · frontend (phases suivantes)
+#             observability · frontend (Angular seul, Gateway déjà démarrée)
 #  Démarrage : make up   (ou : docker compose --profile core up -d --build --wait)
 #  Ports choisis pour ne pas gêner ~/devops (8080, 8081, 9000, 9090, 3000) ni le
 #  MySQL Windows (3306) : voir docs/PLAN.md, section 4.
@@ -307,6 +307,22 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     ports: ["9411:9411"]
+
+  # ============================================================== Frontend
+  # Angular 20 compilé dans node:22 puis servi par nginx ; /api est transmis à la Gateway.
+  frontend:
+    build: ./frontend
+    image: events/frontend:local
+    restart: unless-stopped
+    profiles: [core, lite, frontend]
+    ports: ["4200:8080"]
+    depends_on:
+      api-gateway: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
 
 volumes:
   mysql-data:

@@ -13,6 +13,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 6 — Observabilité | 2026-11-16 21:42 | 2026-11-16 22:15 | 33 min | 1 j | Prometheus (Eureka), Grafana (3 tableaux), Zipkin (trace de bout en bout), 5 alertes |
 | 7 — Swagger et Postman | 2026-11-16 22:16 | 2026-11-16 22:55 | 39 min | 0,5 j | Swagger agrégé, 69 requêtes Postman, 5 pannes vérifiées par Newman |
 | Correctif — circuit du cron | 2026-11-17 11:40 | 2026-11-17 12:35 | 55 min | — | circuit `participant-service-batch` pour le cron, 3 × `newman-pannes` verts |
+| 9 — Frontend Angular (allégé) | 2026-11-17 12:37 | 2026-11-17 12:48 | 11 min (+ ~25 min préparées pendant les runs Newman) | 0,5 à 1 j | 5 écrans via la Gateway, graphiques SVG, `make e2e` 13/13 |
 
 ## Phase 3 — CQRS Axon
 
@@ -101,6 +102,22 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   - 339 tests verts, dont 2 nouveaux : les échecs du batch laissent le circuit utilisateur CLOSED à 0 échec ;
   - `make newman-pannes` 3 fois de suite, 0 échec. Pendant ces passages, le cron a croisé 5 pannes, dont la panne 3 (journal : `participant-service-batch : réponse incorrecte, rejetée`), sans effet sur les tests ;
   - `make newman` : 69 requêtes, 137 assertions, 0 échec ; `make health` vert.
+
+## Phase 9 — Frontend Angular (allégé)
+
+- **Début** : 2026-11-17 12:37 (branche) — **fin** : 12:48. Le code a été écrit entre 12:05 et 12:35, pendant les passages de `make newman-pannes`, sans aucun appel à l'API.
+- **Fait** :
+  - base Angular 20 de `feature/feedback` (configuration, `package-lock.json`, styles, cadre), lue dans le dépôt d'équipe sans le modifier ;
+  - services réécrits pour les routes `/api` de la Gateway et les UUID d'événements ;
+  - 5 écrans : Statistiques (mon module : 6 indicateurs, anneaux et barres en SVG, source CQRS et instance affichées), Événements (création = commande Axon), Détail (vue composée, inscription par Feign, **bandeau de vue dégradée**), Participants, Logistique, Avis (règles de feedback-service) ;
+  - conteneur `frontend` : build dans `node:22`, nginx non root, `/api` transmis à la Gateway, port 4200, dans les profils core et lite ;
+  - `make front-test`, `make e2e` (Playwright en conteneur) ; contrôles frontend dans `make health`. Locale `fr` pour les nombres et les dates.
+- **Problèmes et corrections** :
+  1. sélecteurs ambigus dans le script e2e (« Nom » contenu dans « Prénom », libellé d'un `select` qui inclut ses options) : correspondance exacte et attribut `name` ;
+  2. le 400 attendu de la règle métier « événement non terminé » apparaissait comme une erreur console de Chromium : filtré, seuls les 5xx et les erreurs JavaScript comptent ;
+  3. données laissées par un passage e2e interrompu : supprimées par l'API (participant 29, un événement « Atelier UI »).
+- **Vérifié** : 10 tests Vitest ; build de 101 ko compressé ; `make e2e` 13/13 avec nettoyage ; vue dégradée affichée pendant l'arrêt de participant-service ; `make health` vert (avec le frontend) ; `make newman` 69 requêtes, 0 échec.
+- **Non fait (périmètre)** : connexion Keycloak (ticket 71 « Won't Do »).
 
 ## Périmètre révisé (2026-11-16, à la demande)
 

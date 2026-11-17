@@ -259,7 +259,14 @@ Variables utiles : `S=http://localhost:8088/api/stats`. `$EV` est l'UUID d'un é
 _Retiré du périmètre (2026-11-16) : voir THEORIE Q19._
 
 ## Angular
-_Phase 9._
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| NG1 | http://localhost:4200 | Frontend (nginx, conteneur `frontend`) | 5 écrans : Statistiques, Événements, Participants, Logistique, Avis |
+| NG2 | `curl -sI localhost:4200/api/stats/summary \| grep -i x-stats` | nginx transmet `/api` à la Gateway (même origine, pas de CORS) | `X-Stats-Source: projections-cqrs` |
+| NG3 | `make front-test` | Tests unitaires Vitest et build de production, dans `node:22` | 10 tests verts, bundle initial ≈ 100 ko compressé |
+| NG4 | `make e2e` | Parcours complet dans Chromium (Playwright) : création, inscription Feign, règle métier, nettoyage | 13 contrôles `OK` ; captures dans `frontend/e2e/captures` |
+| NG5 | `docker compose stop participant-service participant-service-2`, ouvrir un événement [Démo] dans l'UI, puis `docker compose --profile core start participant-service participant-service-2` | Vue dégradée visible dans l'UI | bandeau « Vue dégradée : participants indisponible : … » |
+| NG6 | `cd frontend && npm start` (Node requis) | Serveur de développement, proxy `/api` vers 8088 | http://localhost:4200 |
 
 ## Jenkins · SonarQube · Trivy
 _Phase 11._

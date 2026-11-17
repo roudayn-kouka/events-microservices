@@ -129,4 +129,12 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [x] **C73 — Newman, collection complète** : `make newman`. Visible : 69 requêtes, 0 échec.
 - [x] **C74 — Newman, 5 pannes** : `make newman-pannes`. Visible : les 5 dossiers verts et le bilan.
 
+### Frontend Angular (phase 9)
+
+- [ ] **C75 — Tableau de bord statistiques** : http://localhost:4200/statistiques. Visible : 6 indicateurs, badge « source : projections-cqrs » et instance, anneaux (tâches, logistique), barres (participants, coût, notes).
+- [ ] **C76 — Inscription via l'UI** : un événement, choisir un participant, « Inscrire ». Visible : « Participant inscrit. » et le badge « servi par event-service… ».
+- [ ] **C77 — Vue dégradée dans l'UI** : commande NG5. Visible : le bandeau orange « Vue dégradée : participants indisponible : … », la page reste affichée.
+- [ ] **C78 — Règle métier dans l'UI** : écran Avis, un événement futur. Visible : « Event has not finished (HTTP 400) ».
+- [ ] **C79 — make e2e** : terminal. Visible : les 13 contrôles `OK` du parcours Playwright.
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._

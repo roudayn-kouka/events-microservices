@@ -8,7 +8,7 @@ BRANCHE   := $(shell git branch --show-current)
 PROFILES  ?= --profile core
 
 .DEFAULT_GOAL := help
-.PHONY: help env build up restart down ps logs health seed panne repartition replay newman newman-pannes
+.PHONY: help env build up restart down ps logs health seed panne repartition replay newman newman-pannes front-test e2e
 
 help: ## Liste des commandes
 	@awk -F ':.*## ' '/^[a-z-]+:.*## / { printf "  make %-8s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -59,3 +59,13 @@ newman: ## Joue la collection Postman complète (Newman, via la Gateway)
 newman-pannes: ## Les 5 pannes créées puis vérifiées par Newman, puis rétablies
 	@python3 postman/generate.py >/dev/null
 	@bash scripts/newman-pannes.sh
+
+front-test: ## Frontend : tests unitaires (Vitest) et build de production, dans node:22
+	docker run --rm --user $$(id -u):$$(id -g) -e HOME=/tmp -v "$(CURDIR)/frontend:/w" -w /w node:22-alpine \
+	  sh -c "npm ci --no-audit --no-fund && npm test && npm run build"
+
+e2e: ## Frontend : parcours complet dans Chromium (Playwright), captures dans frontend/e2e/captures
+	@mkdir -p frontend/e2e/captures
+	docker run --rm --network host --user $$(id -u):$$(id -g) -e HOME=/tmp -v "$(CURDIR)/frontend/e2e:/e2e" \
+	  -v "$(CURDIR)/frontend/e2e/captures:/shots" -w /e2e mcr.microsoft.com/playwright:v1.55.0-noble \
+	  sh -c "test -d node_modules/playwright || (npm init -y >/dev/null && npm i playwright@1.55.0 --no-audit --no-fund >/dev/null); node parcours.mjs /shots"
