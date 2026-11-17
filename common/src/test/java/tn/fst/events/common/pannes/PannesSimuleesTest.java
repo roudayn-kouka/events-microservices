@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.RequestTemplate;
 import feign.Target;
@@ -46,7 +47,12 @@ class PannesSimuleesTest {
         MockHttpServletResponse reponse = executer(env, "/participants/1", chaine);
         assertEquals(200, reponse.getStatus());
         assertNull(chaine.getRequest()); // le contrôleur n'est pas appelé
-        assertThrows(Exception.class, () -> new ObjectMapper().readTree(reponse.getContentAsString()));
+        // Corps lu HORS de la lambda, exception attendue précise : seul l'échec de lecture du JSON
+        // peut faire passer le test (Sonar java:S5783 : un échec de getContentAsString() le
+        // faisait passer pour une mauvaise raison).
+        String corps = reponse.getContentAsString();
+        ObjectMapper mapper = new ObjectMapper();
+        assertThrows(JsonProcessingException.class, () -> mapper.readTree(corps));
     }
 
     @Test

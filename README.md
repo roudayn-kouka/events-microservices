@@ -26,6 +26,18 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). État final : [docs/ETAT-FINAL.m
 | 13 | Livrables finaux, tag `v1.0.0` | Terminée |
 | 8 | Keycloak | Retirée du périmètre (THEORIE Q19) |
 
+## Résultats finaux
+
+| Indicateur | Résultat final (build Jenkins n° 9, commit `d910ee1`, 2026-11-17) |
+|---|---|
+| Tests | **344** verts (`mvn clean verify`, comptés aussi par Sonar) ; seuil JaCoCo respecté dans les 5 services (statistics-service : 97,7 % des lignes) |
+| Postman / Newman | **69** requêtes, **137** assertions, 0 échec ; `make newman-pannes` : 5 pannes sur 5 |
+| Frontend | 10 tests Vitest ; `make e2e` : 13 contrôles dans Chromium |
+| SonarQube | quality gate **Passed** ; 0 bug, fiabilité **A** ; 0 vulnérabilité, sécurité **A** ; 26 code smells, maintenabilité **A** ; couverture **77,7 %** ; duplication **0,7 %** ; 4 356 lignes de code |
+| Security Hotspots | 1 seul, revu à **100 %** (**A**) : `java:S3752` (CSRF) sur le fallback `IndisponibleController`, **Safe**, car il accepte toutes les méthodes pour les forward des routes, répond 503 en lecture seule, sans session ni cookie (THEORIE Q31) |
+| Trivy (HIGH + CRITICAL corrigeables) | services Java : 6 à 8 (3 CRITICAL, 4 pour eureka-server), dont statistics-service 7 (contre 18 au build 1) ; frontend 0 (contre 57) |
+| Jenkins | builds 1 à 9 en SUCCESS ; Push et AWS désactivés par défaut |
+
 ## Livrables
 
 | Document | Contenu |
@@ -33,7 +45,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). État final : [docs/ETAT-FINAL.m
 | [COMMANDES](docs/COMMANDES.md) | Toutes les commandes, par technologie, avec le résultat attendu |
 | [CAPTURES](docs/CAPTURES.md) | Liste des captures d'écran (C1 à C97) |
 | [SCENARIO-DEMO](docs/SCENARIO-DEMO.md) | Démonstration de 10 minutes, préparation et plans de secours |
-| [THEORIE](docs/THEORIE.md) | Questions du jury et réponses (Q1 à Q30) |
+| [THEORIE](docs/THEORIE.md) | Questions du jury et réponses (Q1 à Q31) |
 | [PRESENTATION-PLAN](docs/PRESENTATION-PLAN.md) | Plan des slides, avec extraits AVANT / APRÈS |
 | [ETAT-FINAL](docs/ETAT-FINAL.md) | Ce qui est fait et testé, ce qui reste |
 | [APRES-PUSH](docs/APRES-PUSH.md) | Publication GitHub, webhook Jenkins, Docker Hub |
