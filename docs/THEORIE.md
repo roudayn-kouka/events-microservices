@@ -251,7 +251,7 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 ### Q30. Qu'a trouvé Trivy, et qu'avez-vous corrigé ?
 
 - **Constat (build 1)** : les couches système des images Java étaient saines (Alpine 3.24 : 0). Les vulnérabilités venaient des **bibliothèques** embarquées dans les JAR (Tomcat, Jackson, Netty, Spring, BouncyCastle, Guava…), plus 57 dans les paquets Alpine de l'image nginx du frontend.
-- **Corrigé** (versions de patch, par les propriétés de Spring Boot, 339 tests toujours verts) : Tomcat 10.1.55 → **10.1.59**, Jackson 2.21.4 → 2.21.7, Netty 4.1.135 → 4.1.137 ; `apk upgrade` dans l'image du frontend. Résultat : statistics-service passe de **18 à 7** (CRITICAL de 8 à 3), et le frontend de **57 à 0**.
+- **Corrigé** (versions de patch, par les propriétés de Spring Boot ; tous les tests restent verts : 339 à ce moment-là, 344 aujourd'hui) : Tomcat 10.1.55 → **10.1.59**, Jackson 2.21.4 → 2.21.7, Netty 4.1.135 → 4.1.137 ; `apk upgrade` dans l'image du frontend. Résultat : statistics-service passe de **18 à 7** (CRITICAL de 8 à 3), et le frontend de **57 à 0**.
 - **Piège** : `mvn verify` sans `clean` gardait les anciennes bibliothèques dans le JAR, qui était « à jour » aux yeux de Maven. Le pipeline fait désormais `mvn clean verify`.
 - **Non corrigé, et pourquoi** : Spring Framework 6.2 n'a de correctif qu'en 7.x, donc Spring Boot 4, incompatible avec Axon 4 (Q2). BouncyCastle et Guava sont des dépendances transitives de Spring Cloud et de gRPC/Axon : forcer leur version sans tests d'intégration dédiés serait risqué. Le paramètre `TRIVY_BLOQUANT` fait échouer le build sur les CRITICAL corrigeables. Il est désactivé tant que ces trois-là ne peuvent pas l'être.
 

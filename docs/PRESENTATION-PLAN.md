@@ -22,7 +22,7 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 15 | Swagger et Postman | Swagger agrégé (sélecteur des 5 services), 69 requêtes Postman, 5 pannes vérifiées par Newman | C72 à C74 |
 | 16 | Sécurité (non implémentée, choix de périmètre) | Comment on sécuriserait la Gateway : OAuth2 / JWT (THEORIE Q19) | — |
 | 17 | Angular | 5 écrans via la Gateway, **tableau de bord statistiques** en SVG, vue dégradée pendant une panne, `make e2e` | C75 à C79 |
-| 18 | Qualité | 339 tests, seuil JaCoCo **bloquant** (lignes ≥ 70 %, branches ≥ 60 %), statistics à 97,7 % | C80 à C82 |
+| 18 | Qualité | 344 tests, seuil JaCoCo **bloquant** (lignes ≥ 70 %, branches ≥ 60 %), statistics à 97,7 % | C80 à C82 |
 | 19 | Jenkins, SonarQube, Trivy | Pipeline multi-services sans push (dépôt local en `git://`), détection des changements, étapes parallèles, quality gate, Trivy avant / après | C83 à C91 |
 | 20 | AWS | Cible A (EC2 + Compose, ≈ 0,10 $/h), Terraform testé sans AWS, confirmation avant apply | C92, C93 (C95 à C97 après le lab) |
 | 21 | Démonstration | Scénario de 10 minutes | — |
