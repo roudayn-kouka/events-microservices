@@ -21,6 +21,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 | 7 | Swagger agrégé, Postman (local et AWS), `make newman`, `make newman-pannes` | Terminée |
 | 9 | Angular 20 allégé : statistiques (graphiques SVG), événements, participants, logistique, avis, via la Gateway | Terminée |
 | 10 | Seuil JaCoCo bloquant dans `mvn verify` (lignes ≥ 70 %, branches ≥ 60 %) | Terminée |
+| 11 | Pipeline Jenkins (job local `events-microservices`) : détection des changements, Sonar et quality gate, Trivy, étapes parallèles ; push et AWS désactivés | Terminée |
 
 ## Prérequis
 

@@ -118,7 +118,7 @@ pipeline {
                             sh """docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v events-trivy-cache:/root/.cache \
                                     --volumes-from jenkins ${TRIVY} image --quiet --scanners vuln --severity HIGH,CRITICAL \
                                     --ignore-unfixed --format table -o "${WORKSPACE}/rapports/trivy-${service}.txt" events/${service}:${TAG}"""
-                            sh "echo \"${service} : \$(grep -E '^Total:' rapports/trivy-${service}.txt | head -1 || echo 'aucune vulnérabilité HIGH/CRITICAL corrigeable')\""
+                            sh "echo \"${service} : \$(grep -m1 -E '^Total:' rapports/trivy-${service}.txt || echo 'Total: 0 (aucune vulnérabilité HIGH/CRITICAL corrigeable)')\""
                             if (params.TRIVY_BLOQUANT) {
                                 sh """docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v events-trivy-cache:/root/.cache \
                                         ${TRIVY} image --quiet --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 \
@@ -154,7 +154,8 @@ pipeline {
                 withCredentials([string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                                  string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
                                  string(credentialsId: 'aws-session-token', variable: 'AWS_SESSION_TOKEN')]) {
-                    sh 'bash infra/aws/deployer.sh'
+                    // DEPLOY_AWS=true vaut confirmation : pas de question possible en CI
+                    sh 'CONFIRMER=oui bash infra/aws/deployer.sh'
                 }
             }
         }

@@ -33,4 +33,10 @@ reponse=$(curl -s -u "$SONAR_TOKEN:" "$SERVEUR/api/qualitygates/project_status?a
 gate=$(sed -n 's/.*"projectStatus":{"status":"\([A-Z_]*\)".*/\1/p' <<<"$reponse")
 echo "Quality gate « $PROJET » : $gate   ($SERVEUR/dashboard?id=$PROJET)"
 echo "$reponse" | tr '{' '\n' | grep -E '"metricKey"' | sed 's/^/  /' | cut -c1-160 || true
+
+# Mesures globales du projet (affichées dans le journal du build : Sonar refuse l'accès anonyme)
+mesures="coverage,bugs,vulnerabilities,security_hotspots,code_smells,duplicated_lines_density,ncloc"
+reponse=$(curl -s -u "$SONAR_TOKEN:" "$SERVEUR/api/measures/component?component=$PROJET&metricKeys=$mesures")
+echo "Mesures du projet :"
+echo "$reponse" | tr '{' '\n' | sed -n 's/.*"metric":"\([a-z_]*\)","value":"\([^"]*\)".*/  \1 = \2/p' || true
 [[ "$gate" == "OK" || "$gate" == "NONE" ]]

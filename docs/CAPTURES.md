@@ -143,4 +143,28 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [ ] **C81 — Seuil JaCoCo bloquant** : commande Q2. Visible : `Rule violated … 0.97, but expected minimum is 0.99` et `BUILD FAILURE`.
 - [ ] **C82 — Rapport de couverture** : commande Q3 dans le navigateur. Visible : la couverture de statistics-service par paquet.
 
+### Jenkins, SonarQube, Trivy (phase 11)
+
+- [ ] **C83 — Job Jenkins** : http://localhost:8080/job/events-microservices/. Visible : la *Stage View* du dernier build, toutes les étapes vertes, « Push des images » et « Déploiement AWS » grisées (skipped).
+- [ ] **C84 — Étapes parallèles** : build → *Pipeline Overview* (ou Blue Ocean). Visible : SonarQube et Frontend en parallèle, puis les 9 branches « Images Docker et Trivy ».
+- [ ] **C85 — Détection des changements** : journal du build, étape « Changements ». Visible : la liste des fichiers modifiés et `SERVICES=…`, avec la commande CI6 à côté (`SERVICES=frontend`).
+- [ ] **C86 — Paramètres** : *Build with Parameters*. Visible : `PUSH_IMAGES`, `DEPLOY_AWS` et `TRIVY_BLOQUANT` décochés.
+- [ ] **C87 — Déclenchement local** : *Polling Log* du job. Visible : « Changes found » après un commit, sans GitHub.
+- [ ] **C88 — SonarQube** : http://localhost:9000/dashboard?id=events-microservices. Visible : quality gate « Passed », couverture, bugs et vulnérabilités.
+- [ ] **C89 — Quality gate dans Jenkins** : journal, étape « Quality gate ». Visible : « Quality gate « events-microservices » : OK » et les mesures.
+- [ ] **C90 — Trivy avant / après** : rapports `trivy-statistics-service.txt` du build 1 (18, dont 8 CRITICAL) et du dernier build (7, dont 3 CRITICAL) ; frontend 57 → 0.
+- [ ] **C91 — Tests dans Jenkins** : build → *Test Result*. Visible : 339 tests, 0 échec.
+
+### AWS préparé (phase 12)
+
+- [ ] **C92 — make aws-check** : terminal. Visible : « Success! 5 passed, 0 failed », « Passed: 0 failure(s) » (ansible-lint) et « Tous les tests de déploiement passent. ».
+- [ ] **C93 — Garde-fou admin_cidr** : `infra/aws/terraform/tests/ec2.tftest.hcl` dans l'IDE, avec le run `refuse_un_acces_ouvert_a_tous` qui passe.
+
+### Après le push et sur AWS (quand ce sera fait)
+
+- [ ] **C94 — Webhook GitHub** : *Recent Deliveries* en 200, et le build déclenché (APRES-PUSH.md, section 2).
+- [ ] **C95 — Plan Terraform et confirmation** : `make aws-up`, le plan puis la question « Taper « oui » ».
+- [ ] **C96 — Démonstration sur AWS** : frontend `http://<IP>:4200` et Newman avec `aws.postman_environment.json`.
+- [ ] **C97 — Destruction** : `make aws-down`, puis `describe-instances` → `terminated`.
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._
