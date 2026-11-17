@@ -49,11 +49,39 @@ import org.springframework.web.bind.annotation.GetMapping;
  *       (ignore-exceptions) : elle remonte telle quelle (RemoteCall la traduit).</li>
  *   <li>Toute autre erreur déclenche le FALLBACK : une ServiceIndisponibleException qui nomme la
  *       cause (circuit ouvert, délai, trop d'appels, réponse incorrecte, réseau).</li>
+ *   <li>ISOLATION PAR CAS D'USAGE (bulkhead) : un traitement de fond (cron) appelle à l'intérieur de
+ *       {@link #enTraitementDeFond(Supplier)}. Ses appels passent par des instances distinctes,
+ *       « &lt;service&gt;-batch » (CircuitBreaker et RateLimiter), sans Retry : ses échecs n'ouvrent
+ *       jamais le circuit des requêtes des utilisateurs, et il ne consomme pas leur quota d'appels.</li>
  * </ul>
  */
 public class ClientsResilients implements BeanPostProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(ClientsResilients.class);
+
+    /** Suffixe des instances Resilience4j réservées aux traitements de fond. */
+    public static final String SUFFIXE_FOND = "-batch";
+
+    /** Vrai pendant un traitement de fond, dans le thread appelant (lu avant le TimeLimiter). */
+    private static final ThreadLocal<Boolean> FOND = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    /**
+     * Exécute un traitement de fond (cron, batch) : les appels Feign qu'il fait utilisent le circuit
+     * « &lt;service&gt;-batch », sans Retry, et non celui des utilisateurs.
+     */
+    public static <T> T enTraitementDeFond(Supplier<T> traitement) {
+        boolean avant = FOND.get();
+        FOND.set(Boolean.TRUE);
+        try {
+            return traitement.get();
+        } finally {
+            if (avant) {
+                FOND.set(Boolean.TRUE);
+            } else {
+                FOND.remove();
+            }
+        }
+    }
 
     private final ObjectProvider<CircuitBreakerRegistry> circuitBreakers;
     private final ObjectProvider<RetryRegistry> retries;
@@ -147,21 +175,24 @@ public class ClientsResilients implements BeanPostProcessor {
 
     /** Point d'entrée commun (aussi testé directement). */
     <T> T executer(String service, boolean lecture, Supplier<T> appel) {
-        CircuitBreaker cb = circuitBreakers.getObject().circuitBreaker(service);
-        RateLimiter rl = rateLimiters.getObject().rateLimiter(service);
+        boolean fond = FOND.get();
+        String instance = fond ? service + SUFFIXE_FOND : service;
+        CircuitBreaker cb = circuitBreakers.getObject().circuitBreaker(instance);
+        RateLimiter rl = rateLimiters.getObject().rateLimiter(instance);
         TimeLimiter tl = timeLimiters.getObject().timeLimiter(service);
         Retry retry = retries.getObject().retry(service);
+        boolean retente = lecture && !fond; // un batch réessaiera à son prochain passage
 
         Supplier<T> protege = () -> limiterLeTemps(tl, appel);
         protege = CircuitBreaker.decorateSupplier(cb, protege);
         protege = RateLimiter.decorateSupplier(rl, protege);
-        if (lecture) {
+        if (retente) {
             protege = Retry.decorateSupplier(retry, protege);
         }
         try {
             return protege.get();
         } catch (RuntimeException e) {
-            throw repli(service, lecture, e, retry, rl, tl);
+            throw repli(instance, retente, e, retry, rl, tl);
         }
     }
 

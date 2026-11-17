@@ -192,6 +192,18 @@ Chaque réponse renvoie au fichier du projet qui illustre le concept. Environ 30
 - **Piège constaté** : supprimer le fichier puis rafraîchir ne suffit pas. Le refresh répond `[]` et la panne reste active : le client garde la source de propriétés qui a disparu côté serveur. **Parade** : écrire d'abord une **valeur neutre** (`latence-ms: 0`), rafraîchir, puis supprimer le fichier (scripts 2 à 4).
 - **Plusieurs instances** : il faut rafraîchir chacune. Spring Cloud Bus le ferait d'un seul appel, mais il demande RabbitMQ ou Kafka : écarté ici, un script suffit.
 
+### Q28. Isolation des circuits par cas d'usage (bulkhead) : pourquoi le cron n'utilise-t-il pas le circuit des utilisateurs ?
+
+- **Le principe (bulkhead, cloison étanche)** : comme les compartiments d'un navire, on sépare les ressources de résilience par cas d'usage, pour qu'une voie d'eau dans l'un ne coule pas les autres. Un circuit ne doit refléter que les appels qu'il protège. Sinon, sa décision (OPEN ou CLOSED) mélange des trafics qui n'ont ni la même importance, ni le même rythme, ni la même tolérance à l'échec.
+- **Ce que j'ai constaté** : à la panne 3, l'inscription devait recevoir 502 (« réponse incorrecte »), mais elle recevait parfois 503 (« circuit ouvert »). L'échantillonnage de `/actuator/circuitbreakers` a montré que le circuit était bien CLOSED, à 0 échec, au début de la panne. Pendant celle-ci, le cron `calculCout` (seconde :00 de chaque minute) appelait participant-service. Ses 3 tentatives (le Retry enveloppe le circuit) comptaient pour 3 échecs. Avec les 2 tentatives de l'utilisateur, le minimum de 5 appels était atteint et le circuit s'ouvrait. **Un traitement de fond décidait donc de ce que voyait l'utilisateur.** Le résultat dépendait de l'heure de la démonstration.
+- **Correction** : `ClientsResilients.enTraitementDeFond(...)`. Les appels Feign faits dans ce bloc utilisent des instances distinctes, `participant-service-batch` et `logistics-service-batch` (CircuitBreaker et RateLimiter), **sans Retry**. Le TimeLimiter reste partagé : le délai acceptable dépend du service appelé, pas de l'appelant. Le test `lesEchecsDuTraitementDeFondLaissentLeCircuitDesUtilisateursFerme` le prouve : 6 échecs du cron ouvrent le circuit batch, celui des utilisateurs reste CLOSED à 0 échec, et l'utilisateur reçoit ensuite la vraie cause (502).
+- **Pourquoi un batch ne doit pas partager le circuit des utilisateurs** :
+  1. **Faux positifs** : un batch fait des rafales d'appels (un par événement) au même instant. Il peut ouvrir à lui seul un circuit que le trafic utilisateur n'aurait pas ouvert, et refuser des requêtes qui auraient abouti.
+  2. **Faux négatifs** : à l'inverse, ses succès peuvent masquer des échecs des utilisateurs dans la fenêtre glissante.
+  3. **Besoins différents** : un utilisateur attend une réponse tout de suite, donc on retente vite (Retry) ou on dégrade. Un batch peut attendre son prochain passage : un Retry ne fait qu'ajouter de la charge sur un service déjà en difficulté.
+  4. **Quota** : avec un RateLimiter partagé, un batch consommerait les autorisations des utilisateurs (429). Ici, chacun a le sien.
+- **Pour aller plus loin** : Resilience4j propose aussi un `Bulkhead` (sémaphore ou pool de threads) qui limite les appels **simultanés** par cas d'usage. Je ne l'ai pas ajouté : le cron est séquentiel, et l'isolation du circuit et du quota suffit ici.
+
 ## Répartition de charge (phase 5)
 
 ### Q24. Comment se fait la répartition entre les deux instances ?

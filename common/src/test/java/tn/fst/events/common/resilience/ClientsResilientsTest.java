@@ -216,4 +216,38 @@ class ClientsResilientsTest {
         assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), e.getStatusCode().value());
         assertEquals("participant-service : trop d'appels (RateLimiter : 2 par 10000 ms)", e.getReason());
     }
+
+    /**
+     * Ajouté (après la phase 7) : isolation par cas d'usage. Le cron calculCout voit participant-service
+     * en panne ; ses échecs ouvrent le circuit « participant-service-batch », jamais celui des
+     * utilisateurs, et il ne retente pas.
+     */
+    @Test
+    void lesEchecsDuTraitementDeFondLaissentLeCircuitDesUtilisateursFerme() {
+        distant.reponse = () -> {
+            throw new DecodeException(200, "JSON tronqué", REQ);
+        };
+        for (int i = 0; i < 6; i++) {
+            ServiceIndisponibleException e = repli(() -> ClientsResilients.enTraitementDeFond(() -> client.lire(1)));
+            assertTrue(e.getReason().startsWith("participant-service-batch : "), e.getReason());
+        }
+        assertEquals(4, distant.appels.get()); // 1 tentative par passage, puis circuit batch ouvert
+        assertEquals(CircuitBreaker.State.OPEN, circuitBreakers.circuitBreaker("participant-service-batch").getState());
+        assertEquals(CircuitBreaker.State.CLOSED, circuitBreakers.circuitBreaker("participant-service").getState());
+        assertEquals(0, circuitBreakers.circuitBreaker("participant-service").getMetrics().getNumberOfFailedCalls());
+
+        // la requête d'un utilisateur, elle, est tentée (3 fois) et reçoit la vraie cause : 502
+        ServiceIndisponibleException e = repli(() -> client.lire(1));
+        assertEquals(HttpStatus.BAD_GATEWAY.value(), e.getStatusCode().value());
+        assertEquals("participant-service : réponse incorrecte, rejetée après 3 tentatives", e.getReason());
+        assertEquals(7, distant.appels.get());
+    }
+
+    @Test
+    void horsDuTraitementDeFondLesAppelsRetrouventLeCircuitDesUtilisateurs() {
+        assertEquals("ok", ClientsResilients.enTraitementDeFond(() -> client.lire(1)));
+        assertEquals("ok", client.lire(1));
+        assertEquals(1, circuitBreakers.circuitBreaker("participant-service-batch").getMetrics().getNumberOfSuccessfulCalls());
+        assertEquals(1, circuitBreakers.circuitBreaker("participant-service").getMetrics().getNumberOfSuccessfulCalls());
+    }
 }
