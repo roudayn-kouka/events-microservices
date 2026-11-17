@@ -1,0 +1,12 @@
+---
+# Swap : t3.large (8 Go) avec le profil lite tient avec 4 Go de swap (marge pendant les builds d'images)
+hote_swap_go: 4
+hote_dossier: /opt/events-microservices
+hote_utilisateur: ubuntu
+hote_paquets:
+  - docker.io
+  - docker-compose-v2
+  - rsync
+  - git
+  - jq
+  - curl

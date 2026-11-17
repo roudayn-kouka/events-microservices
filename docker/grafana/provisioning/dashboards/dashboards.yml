@@ -1,0 +1,10 @@
+# Tableaux de bord chargés au démarrage depuis docker/grafana/dashboards (phase 6)
+apiVersion: 1
+providers:
+  - name: events
+    folder: Events FST
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards

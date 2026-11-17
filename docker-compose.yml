@@ -1,0 +1,332 @@
+# =============================================================================
+#  Events — microservices Spring Cloud : stack locale
+#  Profils :  core (stack complète)  · lite (une instance par service, dev/AWS)
+#             observability · frontend (Angular seul, Gateway déjà démarrée)
+#  Démarrage : make up   (ou : docker compose --profile core up -d --build --wait)
+#  Ports choisis pour ne pas gêner ~/devops (8080, 8081, 9000, 9090, 3000) ni le
+#  MySQL Windows (3306) : voir docs/PLAN.md, section 4.
+# =============================================================================
+name: events
+
+x-spring-service: &spring-service
+  restart: unless-stopped
+  mem_limit: 512m
+  environment: &spring-env
+    CONFIG_SERVER_URL: http://config-server:8888
+    EUREKA_URL: http://eureka-server:8761/eureka
+    AXON_SERVER: axon-server:8124
+    ZIPKIN_URL: http://zipkin:9411/api/v2/spans
+    JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+
+x-healthcheck: &healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 18
+  start_period: 30s
+
+services:
+  # ------------------------------------------------------------------- MySQL
+  mysql:
+    image: mysql:8.4
+    profiles: [core, lite]
+    restart: unless-stopped
+    mem_limit: 768m
+    command: ["--innodb-buffer-pool-size=128M", "--max-connections=300"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Lancer « make env » pour créer .env}
+      EVENT_DB_PASSWORD: ${EVENT_DB_PASSWORD}
+      PARTICIPANT_DB_PASSWORD: ${PARTICIPANT_DB_PASSWORD}
+      LOGISTICS_DB_PASSWORD: ${LOGISTICS_DB_PASSWORD}
+      FEEDBACK_DB_PASSWORD: ${FEEDBACK_DB_PASSWORD}
+      STATS_DB_PASSWORD: ${STATS_DB_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    ports: ["3307:3306"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+
+  # ------------------------------------------------------------- Axon Server
+  # CQRS (phase 3) : event store et routage des commandes, événements et requêtes.
+  # Interface : http://localhost:8024 ; gRPC des services : 8124.
+  axon-server:
+    image: axoniq/axonserver:2025.2.13-nonroot
+    profiles: [core, lite]
+    restart: unless-stopped
+    mem_limit: 768m
+    environment:
+      AXONIQ_AXONSERVER_NAME: axon-server
+      AXONIQ_AXONSERVER_HOSTNAME: axon-server
+      # nœud unique, sans initialisation de cluster ; le mode dev permet de vider l'event store
+      AXONIQ_AXONSERVER_STANDALONE: "true"
+      AXONIQ_AXONSERVER_DEVMODE_ENABLED: "true"
+      JAVA_TOOL_OPTIONS: "-Xmx384m -XX:+UseSerialGC"
+    ports: ["8024:8024", "8124:8124"]
+    volumes:
+      - axon-data:/axonserver/data
+      - axon-events:/axonserver/events
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8024/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # ----------------------------------------------------------- Config Server
+  config-server:
+    <<: *spring-service
+    build: ./config-server
+    image: events/config-server:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: config-server-1
+      # Dépôt monté en lecture seule et CLONÉ par JGit (chemin sans « file: ») :
+      # config-repo/ est lu sur la branche CONFIG_GIT_LABEL, sans toucher au dossier de travail
+      CONFIG_GIT_URI: /repo
+      CONFIG_GIT_LABEL: ${CONFIG_GIT_LABEL:-develop}
+      CONFIG_OVERRIDES_DIR: /config-overrides
+    ports: ["8888:8888"]
+    volumes:
+      - ./:/repo:ro
+      - ./config-overrides:/config-overrides:ro
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # ----------------------------------------------------------- Eureka Server
+  eureka-server:
+    <<: *spring-service
+    build: ./eureka-server
+    image: events/eureka-server:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: eureka-server-1
+    ports: ["8761:8761"]
+    depends_on:
+      config-server: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # ------------------------------------------------------------- API Gateway
+  api-gateway:
+    <<: *spring-service
+    build: ./api-gateway
+    image: events/api-gateway:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: api-gateway-1
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:4200}
+    ports: ["8088:8088"]
+    depends_on:
+      config-server: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8088/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # ====================================================== Services métier
+  participant-service:
+    <<: *spring-service
+    build: ./participant-service
+    image: events/participant-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: participant-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      PARTICIPANT_DB_PASSWORD: ${PARTICIPANT_DB_PASSWORD}
+    ports: ["8102:8102"]
+    depends_on: &depends-socle
+      mysql: { condition: service_healthy }
+      axon-server: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8102/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # Phase 5 (LoadBalancer) : 2e instance, profil core seulement. Même image ; Eureka l'enregistre
+  # sous le même nom, la Gateway et Feign répartissent (round robin). X-Instance-Id la désigne.
+  participant-service-2:
+    <<: *spring-service
+    image: events/participant-service:local
+    profiles: [core]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: participant-service-2
+      DB_HOST: mysql
+      DB_PORT: 3306
+      PARTICIPANT_DB_PASSWORD: ${PARTICIPANT_DB_PASSWORD}
+    ports: ["8112:8102"]
+    depends_on:
+      participant-service: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8102/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  logistics-service:
+    <<: *spring-service
+    build: ./logistics-service
+    image: events/logistics-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: logistics-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      LOGISTICS_DB_PASSWORD: ${LOGISTICS_DB_PASSWORD}
+    ports: ["8103:8103"]
+    depends_on: *depends-socle
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8103/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # Appelle participant-service et logistics-service par Feign (lb://) : pas de depends_on sur
+  # eux, un service métier absent donne un 503 explicite, il ne bloque pas le démarrage.
+  event-service:
+    <<: *spring-service
+    build: ./event-service
+    image: events/event-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: event-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      EVENT_DB_PASSWORD: ${EVENT_DB_PASSWORD}
+    ports: ["8101:8101"]
+    depends_on: *depends-socle
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8101/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # Vérifie l'événement (event-service) et le participant (participant-service) par Feign.
+  feedback-service:
+    <<: *spring-service
+    build: ./feedback-service
+    image: events/feedback-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: feedback-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      FEEDBACK_DB_PASSWORD: ${FEEDBACK_DB_PASSWORD}
+    ports: ["8104:8104"]
+    depends_on: *depends-socle
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8104/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # Mon module, côté requêtes CQRS : projections Axon dans db_stats (stats.source=feign : AVANT CQRS).
+  # La 2e instance (8115) arrive à la phase 5 (LoadBalancer).
+  statistics-service:
+    <<: *spring-service
+    build: ./statistics-service
+    image: events/statistics-service:local
+    profiles: [core, lite]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: statistics-service-1
+      DB_HOST: mysql
+      DB_PORT: 3306
+      STATS_DB_PASSWORD: ${STATS_DB_PASSWORD}
+    ports: ["8105:8105"]
+    depends_on: *depends-socle
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8105/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # Phase 5 : 2e instance de mon module. Les deux partagent db_stats et le jeton du processeur
+  # « statistiques » (token_entry) : un seul segment, donc une seule instance projette à un instant
+  # donné ; les deux répondent aux requêtes (QueryGateway, routées par Axon Server).
+  statistics-service-2:
+    <<: *spring-service
+    image: events/statistics-service:local
+    profiles: [core]
+    environment:
+      <<: *spring-env
+      INSTANCE_ID: statistics-service-2
+      DB_HOST: mysql
+      DB_PORT: 3306
+      STATS_DB_PASSWORD: ${STATS_DB_PASSWORD}
+    ports: ["8115:8105"]
+    depends_on:
+      statistics-service: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8105/actuator/health | grep -q '\"status\":\"UP\"'"]
+
+  # ===================================================== Observabilité (phase 6)
+  # Prometheus découvre les instances par Eureka ; Grafana est provisionné (sources, tableaux de bord)
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    profiles: [core, observability]
+    restart: unless-stopped
+    mem_limit: 384m
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d", "--web.enable-lifecycle"]
+    ports: ["9091:9090"]
+    volumes:
+      - ./docker/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      eureka-server: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/ready | grep -q Ready"]
+
+  grafana:
+    image: grafana/grafana:13.0.13
+    profiles: [core, observability]
+    restart: unless-stopped
+    mem_limit: 384m
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      # consultation sans compte pendant la démonstration (lecture seule)
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/events-jvm-http.json
+    ports: ["3001:3000"]
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep -q ok"]
+
+  zipkin:
+    image: openzipkin/zipkin:3.6.1
+    profiles: [core, observability]
+    restart: unless-stopped
+    mem_limit: 512m
+    ports: ["9411:9411"]
+
+  # ============================================================== Frontend
+  # Angular 20 compilé dans node:22 puis servi par nginx ; /api est transmis à la Gateway.
+  frontend:
+    build: ./frontend
+    image: events/frontend:local
+    restart: unless-stopped
+    profiles: [core, lite, frontend]
+    ports: ["4200:8080"]
+    depends_on:
+      api-gateway: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  mysql-data:
+  axon-data:
+  axon-events:
+  prometheus-data:
+  grafana-data:

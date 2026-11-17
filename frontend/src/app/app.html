@@ -1,0 +1,20 @@
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" routerLink="/statistiques" aria-label="Accueil Events">
+      <span class="brand-mark">E</span>
+      <span class="brand-text">
+        <strong>Events</strong>
+        <small>Microservices</small>
+      </span>
+    </a>
+    <nav aria-label="Navigation principale">
+      @for (lien of liens; track lien.route) {
+        <a [routerLink]="lien.route" routerLinkActive="active" ariaCurrentWhenActive="page">{{ lien.libelle }}</a>
+      }
+    </nav>
+  </header>
+  <main><router-outlet /></main>
+  <footer class="footer">
+    <span>Angular 20 · Spring Cloud Gateway · 5 services · CQRS Axon (statistiques)</span>
+  </footer>
+</div>

@@ -1,0 +1,40 @@
+# Tests : ni Config Server ni Eureka ; base H2 ; calculCout planifié désactivé (« - »)
+spring:
+  application:
+    name: event-service
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:event;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+eureka:
+  client:
+    enabled: false
+# Axon sans Axon Server : bus de commandes local et event store JPA sur H2
+axon:
+  axonserver:
+    enabled: false
+  # même sérialiseur qu'en production (config-repo/application.yml, non importé ici)
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
+  eventhandling:
+    processors:
+      event-lecture:
+        mode: subscribing
+events:
+  # règles métier testées sans la couche de résilience (testée dans common)
+  resilience:
+    enabled: false
+  cout:
+    cron: "-"
+logging:
+  level:
+    root: warn

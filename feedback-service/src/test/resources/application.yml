@@ -1,0 +1,33 @@
+# Tests : ni Config Server ni Eureka ; base H2 (contrainte d'unicité réelle)
+spring:
+  application:
+    name: feedback-service
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:feedback;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+# Axon sans Axon Server : bus local et event store JPA sur H2 ; même sérialiseur qu'en production
+axon:
+  axonserver:
+    enabled: false
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
+eureka:
+  client:
+    enabled: false
+logging:
+  level:
+    root: warn
+# règles métier testées sans la couche de résilience (testée dans common)
+events:
+  resilience:
+    enabled: false

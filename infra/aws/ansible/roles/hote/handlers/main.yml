@@ -1,0 +1,9 @@
+---
+- name: Activer le swap
+  ansible.builtin.shell: |
+    set -e
+    mkswap /swapfile
+    swapon /swapfile
+  args:
+    executable: /bin/bash
+  changed_when: true

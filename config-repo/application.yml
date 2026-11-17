@@ -1,0 +1,79 @@
+# =============================================================================
+#  Configuration COMMUNE à tous les services (servie par le Config Server).
+#  Un fichier <service>.yml complète ou remplace ces valeurs pour chaque service.
+#  Aucun secret ici : les ${...} sont résolus par chaque service avec SES variables
+#  d'environnement (fichier .env, jamais versionné).
+# =============================================================================
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    registry-fetch-interval-seconds: 5
+    # Premier enregistrement 5 s après le démarrage (40 s par défaut)
+    initial-instance-info-replication-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    # Identifiant lisible dans Eureka et dans l'en-tête X-Instance-Id : <service>:<instance>
+    instance-id: ${spring.application.name}:${INSTANCE_ID:${random.value}}
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+
+spring:
+  datasource:
+    hikari:
+      # base inaccessible : échec en 3 s au lieu de 30 s (panne 5, fail fast)
+      connection-timeout: 3000
+  cloud:
+    loadbalancer:
+      cache:
+        # Liste des instances mise en cache par la Gateway et Feign : 5 s (35 s par défaut),
+        # pour qu'une instance arrêtée ou revenue soit prise en compte vite (démo, panne n°1)
+        ttl: 5s
+
+# CQRS Axon (phase 3) : Axon Server pour les commandes, les événements et les requêtes.
+# Jackson pour tous les messages (XStream, le défaut d'Axon 4, est déprécié et lit du XML) ;
+# les contrats d'événements sont dans le module events-api.
+axon:
+  axonserver:
+    servers: ${AXON_SERVER:localhost:8124}
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
+
+management:
+  # Observabilité (phase 6) : toutes les requêtes tracées (démonstration ; 10 % en production),
+  # envoyées à Zipkin ; traceId et spanId ajoutés aux logs par Spring Boot.
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+  health:
+    circuitbreakers:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,refresh,circuitbreakers,circuitbreakerevents,retries,ratelimiters,timelimiters
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      # histogrammes pour calculer la latence p95 dans Prometheus (tableau de bord HTTP, alerte)
+      percentiles-histogram:
+        http.server.requests: true
+
+info:
+  application: ${spring.application.name}
+  instance: ${INSTANCE_ID:local}
+  projet: Events FST - microservices Spring Cloud

@@ -1,0 +1,2455 @@
+{
+  "info": {
+    "name": "Events FST — microservices Spring Cloud",
+    "description": "Toutes les requêtes passent par l'API Gateway ({{gateway}}). Générée par postman/generate.py.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "participant-service",
+      "description": "**participant-service** — repris de `feature/participant (Farah Baraket)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/participant/add` | `POST /api/participants` |\n| `GET /events/participant/all` | `GET /api/participants` |\n| `GET /events/participant/{id}` | `GET /api/participants/{id}` |\n| `PUT /events/participant/update/{id}` | `PUT /api/participants/{id}` |\n| `PUT /events/participant/{id}/tache/{tache}` | `PUT /api/participants/{id}/tache/{tache}` |\n| `DELETE /events/participant/delete/{id}` | `DELETE /api/participants/{id}` |\n| `POST /events/event/addPart` | `POST /api/participants` |\n| `(nouveau, pour Feign)` | `GET /api/participants?ids=1,2` |\n| `(nouveau, pour calculCout)` | `GET /api/participants/search?nom=&prenom=&tache=` |",
+      "item": [
+        {
+          "name": "Créer un participant (organisateur)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('participantId', pm.response.json().idPart);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/participants",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Tounsi\",\n  \"prenom\": \"Ahmed\",\n  \"tache\": \"ORGANISATEUR\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Créer un participant (invitée)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('participantId2', pm.response.json().idPart);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/participants",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Ben Salah\",\n  \"prenom\": \"Amira\",\n  \"tache\": \"INVITE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Lister les participants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire un participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "{{participantId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire un lot (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants?ids={{participantId}},{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{participantId}},{{participantId2}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Rechercher (calculCout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/search?nom=Tounsi&prenom=Ahmed&tache=ORGANISATEUR",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "nom",
+                  "value": "Tounsi"
+                },
+                {
+                  "key": "prenom",
+                  "value": "Ahmed"
+                },
+                {
+                  "key": "tache",
+                  "value": "ORGANISATEUR"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier un participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/participants/{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "{{participantId2}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Ben Salah\",\n  \"prenom\": \"Amira\",\n  \"tache\": \"SERVEUR\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Changer la tâche",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/{{participantId2}}/tache/ANIMATEUR",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "{{participantId2}}",
+                "tache",
+                "ANIMATEUR"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : participant inconnu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/999999",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : nom vide (validation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/participants",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"\",\n  \"prenom\": \"X\",\n  \"tache\": \"INVITE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : tâche inconnue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/participants/{{participantId}}/tache/PILOTE",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "participants",
+                "{{participantId}}",
+                "tache",
+                "PILOTE"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "logistics-service",
+      "description": "**logistics-service** — repris de `feature/logistics (Ahlem Mastouri)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/logistics` | `POST /api/logistics` |\n| `PUT /events/logistics` | `PUT /api/logistics` |\n| `GET /events/logistics` | `GET /api/logistics` |\n| `GET /events/logistics/{id}` | `GET /api/logistics/{id} (404 si introuvable, 500 avant)` |\n| `DELETE /events/logistics/{id}` | `DELETE /api/logistics/{id}` |\n| `GET /events/logistics/reserved` | `GET /api/logistics/reserved` |\n| `GET /events/logistics/{id}/cout` | `GET /api/logistics/{id}/cout` |\n| `(nouveau, pour Feign)` | `GET /api/logistics?ids=1,2` |\n| `(nouveau, pour calculCout)` | `GET /api/logistics/cout-reserve?ids=1,2` |",
+      "item": [
+        {
+          "name": "Créer une logistique réservée",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('logisticsId', pm.response.json().idLog);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Chaises\",\n  \"reserve\": true,\n  \"prixUnit\": 12.5,\n  \"quantite\": 40\n}"
+            }
+          }
+        },
+        {
+          "name": "Créer une logistique non réservée",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('logisticsId2', pm.response.json().idLog);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Tables\",\n  \"reserve\": false,\n  \"prixUnit\": 30,\n  \"quantite\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Lister la logistique",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire une logistique",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/{{logisticsId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "{{logisticsId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logistique réservée",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/reserved",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "reserved"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coût d'une logistique (12.5 x 40 = 500)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Coût = 500', () => pm.expect(pm.response.json()).to.eql(500));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/{{logisticsId}}/cout",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "{{logisticsId}}",
+                "cout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire un lot (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics?ids={{logisticsId}},{{logisticsId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{logisticsId}},{{logisticsId2}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coût réservé d'un lot (calculCout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Seule la logistique réservée compte', () => pm.expect(pm.response.json()).to.eql(500));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/cout-reserve?ids={{logisticsId}},{{logisticsId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "cout-reserve"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{logisticsId}},{{logisticsId2}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier une logistique",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLog\": \"{{logisticsId2}}\",\n  \"description\": \"Tables rondes\",\n  \"reserve\": true,\n  \"prixUnit\": 30,\n  \"quantite\": 10\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : logistique inconnue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/logistics/999999",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : quantité négative",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Chaises\",\n  \"reserve\": true,\n  \"prixUnit\": 10,\n  \"quantite\": -3\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "event-service",
+      "description": "**event-service** — repris de `feature/event (Nour Mustapha), corrections de feature/feedback`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/event/addEvent` | `POST /api/events (participantIds vérifiés par Feign)` |\n| `POST /events/event/addEvent/{id}` | `POST /api/events/participant/{idPart}` |\n| `PUT /events/event/addAffectLog/{description}` | `PUT /api/events/by-description/{description}/logistics` |\n| `GET /events/event/getLogs/{d1}/{d2}` | `GET /api/events/logistics/{d1}/{d2}` |\n| `POST /events/event/addPart` | `POST /api/participants (participant-service)` |\n| `(aucune lecture)` | `GET /api/events, GET /api/events/{id}` |\n| `(nouveau, composition Feign)` | `GET /api/events/{id}/details` |\n| `(nouveau)` | `PUT /api/events/{id}, DELETE /api/events/{id}` |\n| `(nouveau)` | `POST /api/events/{id}/participants/{idPart}` |\n| `(nouveau)` | `POST /api/events/{id}/logistics` |\n| `calculCout @Scheduled 60 s` | `idem + POST /api/events/cout/recalcul` |",
+      "item": [
+        {
+          "name": "Créer un événement de l'organisateur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('eventId', pm.response.json().idEvent);\npm.collectionVariables.set('eventDescription', pm.response.json().description);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Gala-FST-{{$timestamp}}\",\n  \"dateDebut\": \"2026-12-10\",\n  \"dateFin\": \"2026-12-11\",\n  \"participantIds\": [\n    \"{{participantId}}\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Créer un événement pour un participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('eventId2', pm.response.json().idEvent);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events/participant/{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "participant",
+                "{{participantId2}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Atelier-{{$timestamp}}\",\n  \"dateDebut\": \"2026-12-20\",\n  \"dateFin\": \"2026-12-20\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Lister les événements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lire un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inscrire un participant (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Deux inscrits', () => pm.expect(pm.response.json().participantIds.length).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId}}/participants/{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId}}",
+                "participants",
+                "{{participantId2}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Créer et rattacher une logistique (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId}}/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId}}",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Chaises\",\n  \"reserve\": true,\n  \"prixUnit\": 2.5,\n  \"quantite\": 100\n}"
+            }
+          }
+        },
+        {
+          "name": "Rattacher par description (ancien addAffectLog)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events/by-description/{{eventDescription}}/logistics",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "by-description",
+                "{{eventDescription}}",
+                "logistics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Goodies\",\n  \"reserve\": false,\n  \"prixUnit\": 4,\n  \"quantite\": 50\n}"
+            }
+          }
+        },
+        {
+          "name": "Recalculer le coût (calculCout via Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "const ev = pm.response.json().find(e => e.idEvent === pm.collectionVariables.get('eventId'));\npm.test('Coût = 250 (réservé seulement)', () => pm.expect(ev.cout).to.eql(250));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/cout/recalcul",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "cout",
+                "recalcul"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Détails (3 services composés)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Participants et logistique lus par Feign', () => {\n  pm.expect(pm.response.json().participants.length).to.eql(2);\n  pm.expect(pm.response.json().logistics.length).to.eql(2);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId}}/details",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId}}",
+                "details"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logistique réservée de la période",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Réservée seulement', () => pm.response.json().forEach(l => pm.expect(l.reserve).to.be.true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/logistics/2026-12-01/2026-12-31",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "logistics",
+                "2026-12-01",
+                "2026-12-31"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId2}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Atelier Spring Cloud\",\n  \"dateDebut\": \"2026-12-21\",\n  \"dateFin\": \"2026-12-22\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Supprimer un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{eventId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{eventId2}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : événement inconnu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : participant inconnu (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Fantome\",\n  \"dateDebut\": \"2026-12-10\",\n  \"dateFin\": \"2026-12-11\",\n  \"participantIds\": [\n    999999\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : date de fin avant la date de début",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Inverse\",\n  \"dateDebut\": \"2026-12-10\",\n  \"dateFin\": \"2026-12-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : description vide (validation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"\",\n  \"dateDebut\": \"2026-12-10\",\n  \"dateFin\": \"2026-12-11\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "feedback-service",
+      "description": "**feedback-service** — repris de `feature/feedback (Emna, ouemnaa)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `POST /events/feedback/{idEvent}/{idPart}` | `POST /api/feedback/{idEvent}/{idPart} (vérifs par Feign)` |\n| `GET /events/feedback/event/{id}` | `GET /api/feedback/event/{id}` |\n| `GET /events/feedback/event/{id}/moyenne` | `GET /api/feedback/event/{id}/moyenne` |\n| `DELETE /events/feedback/{id}` | `DELETE /api/feedback/{id}` |\n| `GET /events/event-stats (moyenne)` | `GET /api/feedback/moyennes (lu par statistics-service)` |",
+      "item": [
+        {
+          "name": "Préparer : événement terminé (event-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('feedbackEventId', pm.response.json().idEvent);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Forum-{{$timestamp}}\",\n  \"dateDebut\": \"2025-06-01\",\n  \"dateFin\": \"2025-06-02\",\n  \"participantIds\": [\n    \"{{participantId}}\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Préparer : événement à venir (event-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('futurEventId', pm.response.json().idEvent);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Futur-{{$timestamp}}\",\n  \"dateDebut\": \"2030-01-01\",\n  \"dateFin\": \"2030-01-02\",\n  \"participantIds\": [\n    \"{{participantId}}\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Donner un avis",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.collectionVariables.set('feedbackId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 5,\n  \"commentaire\": \"Excellent forum\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Avis d'un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/event/{{feedbackEventId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "event",
+                "{{feedbackEventId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Moyenne d'un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Moyenne = 5', () => pm.expect(pm.response.json().averageRating).to.eql(5));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/event/{{feedbackEventId}}/moyenne",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "event",
+                "{{feedbackEventId}}",
+                "moyenne"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Moyennes de tous les événements (statistics-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Contient l\\'événement noté', () => pm.expect(pm.response.json().some(m => m.eventId === pm.collectionVariables.get('feedbackEventId'))).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/moyennes",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "moyennes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 409 : deuxième avis du même participant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : participant non inscrit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId2}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId2}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : événement pas terminé",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{futurEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{futurEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : note hors bornes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 6\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : note décimale",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 1.5\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : événement inconnu (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/00000000-0000-0000-0000-000000000000/{{participantId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "00000000-0000-0000-0000-000000000000",
+                "{{participantId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : participant inconnu (Feign)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackEventId}}/999999",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackEventId}}",
+                "999999"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 4\n}"
+            }
+          }
+        },
+        {
+          "name": "Supprimer un avis",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : avis déjà supprimé",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/feedback/{{feedbackId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "feedback",
+                "{{feedbackId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "statistics-service (mon module) — CQRS, côté requêtes",
+      "description": "**statistics-service (mon module) — CQRS, côté requêtes** — repris de `feature/event-statistics (Roudayna Kouka) + note moyenne de feature/feedback`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `GET /events/event-stats` | `GET /api/stats/events` |\n| `GET /events/event-stats/{id}` | `GET /api/stats/events/{id} (UUID)` |\n| `GET /events/event-stats/summary` | `GET /api/stats/summary` |\n| `GET /events/event-stats/upcoming` | `GET /api/stats/upcoming` |\n| `GET /events/event-stats/between/{d1}/{d2}` | `GET /api/stats/between/{d1}/{d2}` |\n| `(nouveau)` | `en-tête X-Stats-Source : projections-cqrs (phase 3) ; feign-avant-cqrs si stats.source=feign` |\n| `(nouveau, CQRS)` | `GET /api/stats/admin/projection, POST /api/stats/admin/replay` |",
+      "item": [
+        {
+          "name": "Résumé global (projections db_stats, QueryGateway)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Version APRÈS CQRS', () => pm.expect(pm.response.headers.get('X-Stats-Source')).to.eql('projections-cqrs'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/summary",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Statistiques de tous les événements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/events",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "events"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Statistiques d'un événement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Coût réservé = 250, 2 participants', () => {\n  pm.expect(pm.response.json().coutLogistiqueReservee).to.eql(250);\n  pm.expect(pm.response.json().nbParticipants).to.eql(2);\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/events/{{eventId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "events",
+                "{{eventId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Statistiques de l'événement terminé",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Durée inclusive = 2 jours', () => pm.expect(pm.response.json().dureeJours).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/events/{{feedbackEventId}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "events",
+                "{{feedbackEventId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Événements à venir",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/upcoming",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "upcoming"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Événements d'une période",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Contient l\\'événement de décembre', () => pm.expect(pm.response.json().some(s => s.idEvent === pm.collectionVariables.get('eventId'))).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/between/2026-12-01/2026-12-31",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "between",
+                "2026-12-01",
+                "2026-12-31"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : intervalle inversé",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/between/2026-12-31/2026-01-01",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "between",
+                "2026-12-31",
+                "2026-01-01"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 400 : date invalide",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/between/2026-13-01/2026-12-31",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "between",
+                "2026-13-01",
+                "2026-12-31"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Erreur 404 : événement inconnu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/events/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "events",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          }
+        },
+        {
+          "name": "État de la projection CQRS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Processeur statistiques actif', () => pm.expect(pm.response.json().enCours).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/admin/projection",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "admin",
+                "projection"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Replay (202 sur l'instance qui détient le jeton, sinon 409 explicite)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 202 ou 409', () => pm.expect([202, 409]).to.include(pm.response.code));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Rejoué, ou refus qui indique make replay', () => {\n  if (pm.response.code === 202) pm.expect(pm.response.json().processeur).to.eql('statistiques');\n  else pm.expect(pm.response.json().message).to.include('make replay');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/stats/admin/replay",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "stats",
+                "admin",
+                "replay"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentation OpenAPI (Swagger agrégé)",
+      "description": "**Documentation OpenAPI (Swagger agrégé)** — repris de `springdoc dans chaque service, sélecteur dans la Gateway (phase 7)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `(aucune documentation)` | `http://localhost:8088/swagger-ui.html : un sélecteur pour les 5 services` |\n| `(aucune documentation)` | `GET /docs/<service>/v3/api-docs (OpenAPI 3.1, serveur /api)` |",
+      "item": [
+        {
+          "name": "OpenAPI de participant-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/participant-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "participant-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI de logistics-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/logistics-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "logistics-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI de event-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/event-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "event-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI de feedback-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/feedback-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "feedback-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI de statistics-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/statistics-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "statistics-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "participantId",
+      "value": "1"
+    },
+    {
+      "key": "participantId2",
+      "value": "1"
+    },
+    {
+      "key": "logisticsId",
+      "value": "1"
+    },
+    {
+      "key": "logisticsId2",
+      "value": "1"
+    },
+    {
+      "key": "eventId",
+      "value": "1"
+    },
+    {
+      "key": "eventId2",
+      "value": "1"
+    },
+    {
+      "key": "eventDescription",
+      "value": "1"
+    },
+    {
+      "key": "feedbackEventId",
+      "value": "1"
+    },
+    {
+      "key": "futurEventId",
+      "value": "1"
+    },
+    {
+      "key": "feedbackId",
+      "value": "1"
+    }
+  ]
+}

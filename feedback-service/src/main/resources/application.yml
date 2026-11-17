@@ -1,0 +1,16 @@
+# Seuls le nom et l'adresse du Config Server sont locaux ; le reste : config-repo/feedback-service.yml
+spring:
+  application:
+    name: feedback-service
+  config:
+    import: "configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      # + réglages de résilience Feign partagés (config-repo/resilience-feign.yml)
+      name: ${spring.application.name},resilience-feign
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        multiplier: 1.5
+        max-interval: 10000
+        max-attempts: 20

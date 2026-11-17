@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  POM parent du monorepo Events (Spring Cloud).
+  Il fixe UNE fois les versions de toute la plateforme ; chaque service (un dossier
+  par service, déclaré dans <modules>) en hérite sans répéter de version.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.16</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>tn.fst.events</groupId>
+    <artifactId>events-microservices</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>events-microservices</name>
+    <description>Gestion des événements FST en microservices Spring Cloud (CQRS Axon)</description>
+
+    <modules>
+        <!-- Socle Spring Cloud (phase 1) -->
+        <module>config-server</module>
+        <module>eureka-server</module>
+        <module>api-gateway</module>
+        <!-- Briques web partagées (erreurs JSON, X-Instance-Id) -->
+        <module>common</module>
+        <!-- Contrats des événements Axon partagés (phase 3, CQRS) -->
+        <module>events-api</module>
+        <!-- Services métier (phase 2) -->
+        <module>participant-service</module>
+        <module>logistics-service</module>
+        <module>event-service</module>
+        <module>feedback-service</module>
+        <module>statistics-service</module>
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Phase 11 : correctifs de sécurité signalés par Trivy (CVE CRITICAL et HIGH), en
+             versions de PATCH seulement, par les propriétés de Spring Boot 3.5.16.
+             Non corrigées ici (ETAT-FINAL, phase 11) : Spring Framework (correctif seulement en 7.x,
+             donc Boot 4, incompatible avec Axon 4) ; Guava et BouncyCastle (transitives d'Axon/gRPC
+             et de Spring Cloud). -->
+        <tomcat.version>10.1.59</tomcat.version>
+        <jackson-bom.version>2.21.7</jackson-bom.version>
+        <netty.version>4.1.137.Final</netty.version>
+        <!-- Spring Cloud 2025.0 (Northfields) : appairage officiel de Spring Boot 3.5 -->
+        <spring-cloud.version>2025.0.3</spring-cloud.version>
+        <!-- Axon 4.13 : CQRS / event sourcing, compatible Spring Boot 3 (Jakarta) -->
+        <axon.version>4.13.3</axon.version>
+        <springdoc.version>2.8.17</springdoc.version>
+        <jacoco.version>0.8.13</jacoco.version>
+        <!-- Seuils JaCoCo bloquants (phase 10) ; surchargeables : -Djacoco.minimum.lignes=0.99 -->
+        <jacoco.minimum.lignes>0.70</jacoco.minimum.lignes>
+        <jacoco.minimum.branches>0.60</jacoco.minimum.branches>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>tn.fst.events</groupId>
+                <artifactId>common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>tn.fst.events</groupId>
+                <artifactId>events-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.axonframework</groupId>
+                <artifactId>axon-bom</artifactId>
+                <version>${axon.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <id>prepare-agent</id>
+                            <goals><goal>prepare-agent</goal></goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>verify</phase>
+                            <goals><goal>report</goal></goals>
+                        </execution>
+                        <!-- Phase 10 : seuil BLOQUANT. mvn verify échoue si la couverture du module
+                             passe sous le minimum (lignes et branches), dans chaque service métier. -->
+                        <execution>
+                            <id>check</id>
+                            <phase>verify</phase>
+                            <goals><goal>check</goal></goals>
+                            <configuration>
+                                <haltOnFailure>true</haltOnFailure>
+                                <rules>
+                                    <rule>
+                                        <element>BUNDLE</element>
+                                        <limits>
+                                            <limit>
+                                                <counter>LINE</counter>
+                                                <value>COVEREDRATIO</value>
+                                                <minimum>${jacoco.minimum.lignes}</minimum>
+                                            </limit>
+                                            <limit>
+                                                <counter>BRANCH</counter>
+                                                <value>COVEREDRATIO</value>
+                                                <minimum>${jacoco.minimum.branches}</minimum>
+                                            </limit>
+                                        </limits>
+                                    </rule>
+                                </rules>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

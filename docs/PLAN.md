@@ -3,8 +3,21 @@
 DS Architecture des composants · FST · GL5 — Roudayna Kouka
 Module mis en avant : **statistics-service** (côté requêtes CQRS, projections et tableau de bord).
 
-> Statut : **plan à valider**. Rien n'a été codé, aucun conteneur n'a été créé. Seul ce fichier existe dans `~/events-microservices/`.
-> Le dépôt d'équipe `IGL5-G2-EventsProjetcs` a seulement été lu (`git fetch` + lecture des branches), sans aucune modification.
+> Statut : **plan validé le 15/11, réalisé le 17/11** (phases 0 à 7 et 9 à 13 ; phase 8 retirée). Suivi réel : `JOURNAL.md` ; bilan : `docs/ETAT-FINAL.md`. Le dépôt d'équipe `IGL5-G2-EventsProjetcs` est seulement lu, jamais modifié.
+
+### Décisions validées
+
+| Sujet | Décision |
+|---|---|
+| Versions | **Spring Boot 3.5.16, Spring Cloud 2025.0.3, Axon 4.13.3, springdoc 2.8.17**. Boot 3.3 est hors support de sécurité ; Boot 4 n'est pas supporté par Axon 4 (THEORIE Q2) |
+| Deadline | Non fixée : l'avancement est rappelé au début de chaque phase |
+| Ordre de repli | 1. exigences de l'énoncé (socle, 5 services, Feign, Resilience4j + 5 pannes, LoadBalancer, CQRS, Prometheus/Grafana/Zipkin) ; 2. Git/JIRA et livrables ; 3. Jenkins et SonarQube ; 4. frontend ; 5. Keycloak ; 6. préparation AWS |
+| Docker | Intégration WSL de Docker Desktop activée par l'utilisatrice (prérequis de la phase 1) ; Node LTS installé dans WSL avec nvm |
+| Frontend | Base Angular 20 de `feature/feedback`, + écrans participants et logistique, + dashboard statistiques avec graphiques |
+| AWS | Cible A (EC2 + Docker Compose, rsync, build sur place) ; type d'instance en variable Terraform : `t3.large` par défaut, `t3.medium` + profil `lite` en repli |
+| Git | Identité `Roudayna Kouka <roudayna.kouka@etudiant-fst.utm.tn>` ; aucune mention de Claude ; ni push ni remote |
+| `~/devops` | Inspection en lecture seule à la phase 11, aucune modification |
+| Identifiants | UUID pour les événements (agrégat Axon), entiers auto-incrémentés pour participant, logistique et feedback (THEORIE Q1) |
 
 ---
 
@@ -189,12 +202,12 @@ Avec 20 Go alloués à WSL, tout tient, y compris le pipeline. Un profil supplé
 | Composant | Version | Justification |
 |---|---|---|
 | Java | 17 | Déjà installé dans WSL ; minimum de Spring Boot 3 |
-| Spring Boot | **3.3.x** (dernier correctif) | Couple officiel avec Spring Cloud 2023.0 ; Jakarta, Micrometer Tracing |
-| Spring Cloud | **2023.0.x** (Leyton) | Config, Eureka, Gateway, OpenFeign, LoadBalancer, CircuitBreaker Resilience4j, tous compatibles avec Boot 3.3 |
-| Axon Framework | 4.10.x | Compatible Boot 3 et Jakarta ; `AggregateTestFixture`, JPA token store sur MySQL |
+| Spring Boot | **3.5.16** | Dernière ligne 3.x maintenue ; 3.3 n'a plus de correctifs de sécurité ; Boot 4 non supporté par Axon 4 |
+| Spring Cloud | **2025.0.3** (Northfields) | Appairage officiel de Boot 3.5 : Config, Eureka, Gateway, OpenFeign, LoadBalancer, CircuitBreaker Resilience4j |
+| Axon Framework | **4.13.3** | Dernière 4.x ; compatible Boot 3 et Jakarta ; `AggregateTestFixture`, JPA token store sur MySQL |
 | Axon Server | Community, conteneur officiel | Event store et routage des messages ; interface sur 8024 |
 | Resilience4j | celui de Spring Cloud CircuitBreaker | Retry, RateLimiter, CircuitBreaker, TimeLimiter configurables dans `config-repo` |
-| springdoc-openapi | 2.x (webmvc et webflux pour la Gateway) | Swagger par service, agrégé dans la Gateway |
+| springdoc-openapi | 2.8.17 (webmvc et webflux pour la Gateway) | Swagger par service, agrégé dans la Gateway |
 | Tracing | Micrometer Tracing (Brave) + Zipkin | Remplace Sleuth en Boot 3 ; traceId et spanId dans les logs |
 | MySQL | 8.4 LTS | Une instance, une base et un utilisateur par service |
 | Keycloak | 25/26 (conteneur officiel) | Import automatique du realm au démarrage |
@@ -206,6 +219,13 @@ Je vérifierai le dernier correctif exact de chaque ligne au début de la phase 
 ---
 
 ## 7. Phases
+
+> **Périmètre révisé le 2026-11-16** (décision de l'utilisatrice, pour viser l'efficacité par rapport à la grille, où l'Excellence est plafonnée à 3 points) :
+> phases 3 à 7 inchangées ; **phase 8 Keycloak retirée** (tickets « Won't Do », sécurisation expliquée dans THEORIE Q19) ;
+> phase 9 Angular **allégée** (0,5 à 1 j : écrans feedback, participant et logistique branchés sur la Gateway, dashboard statistiques avec graphiques, sans connexion) ;
+> phase 10 en un seul commit (seuil JaCoCo bloquant) ; phase 11 avec arrêt avant toute action sur `~/devops` ;
+> phase 12 limitée à 0,5 j (Terraform EC2 + script + runbook, validés sans `apply`) ; phase 13 inchangée.
+> Le suivi réel (heures, durées) est dans `JOURNAL.md`.
 
 Chaque phase se fait sur une branche `feature/<phase>`, fusionnée en local dans `develop`, avec des commits conventionnels qui citent la clé JIRA. Une version est taguée après les phases 6, 10 et 13. Durées estimées en temps de travail effectif.
 

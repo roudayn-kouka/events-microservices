@@ -1,0 +1,5 @@
+# Terraform : ni cache de fournisseurs, ni état, ni plan dans Git
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan

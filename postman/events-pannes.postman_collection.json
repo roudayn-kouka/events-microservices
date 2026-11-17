@@ -1,0 +1,246 @@
+{
+  "info": {
+    "name": "Events FST — scénarios de panne",
+    "description": "Jouée par make newman-pannes : chaque dossier suppose la panne créée par le script.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Panne 1 — disponibilité (participant-service arrêté)",
+      "item": [
+        {
+          "name": "Lecture composée : dégradée (200 + avertissement)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Vue dégradée : participant-service signalé indisponible', () => pm.expect((pm.response.json().avertissements || []).join(' ')).to.include('participant-service'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{ev}}/details",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{ev}}",
+                "details"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inscription : refusée (503 explicite)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 503', () => pm.response.to.have.status(503));",
+                  "pm.test('Fallback nommé', () => pm.expect(pm.response.json().message).to.include('participant-service'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{ev}}/participants/{{part}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{ev}}",
+                "participants",
+                "{{part}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Panne 2 — temps de réponse > 5 s",
+      "item": [
+        {
+          "name": "Inscription : abandon par le TimeLimiter (504)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 504', () => pm.response.to.have.status(504));",
+                  "pm.test('TimeLimiter 5 s', () => pm.expect(pm.response.json().message).to.include('TimeLimiter'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{ev}}/participants/{{part}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{ev}}",
+                "participants",
+                "{{part}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Panne 3 — réponse incorrecte",
+      "item": [
+        {
+          "name": "Inscription : réponse rejetée (502)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 502', () => pm.response.to.have.status(502));",
+                  "pm.test('Réponse incorrecte rejetée', () => pm.expect(pm.response.json().message).to.include('réponse incorrecte'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{ev}}/participants/{{part}}",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{ev}}",
+                "participants",
+                "{{part}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Panne 4 — erreur réseau (URL mal configurée)",
+      "item": [
+        {
+          "name": "Lecture composée : dégradée (erreur réseau)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Erreur réseau nommée', () => pm.expect((pm.response.json().avertissements || []).join(' ')).to.include('erreur réseau'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{ev}}/details",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{ev}}",
+                "details"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Panne 5 — dépendance externe (base inaccessible)",
+      "item": [
+        {
+          "name": "Santé de participant-service : DOWN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 503', () => pm.response.to.have.status(503));",
+                  "pm.test('Composant db DOWN', () => pm.expect(pm.response.json().components.db.status).to.eql('DOWN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{participantActuator}}/health"
+          }
+        },
+        {
+          "name": "Lecture composée : dégradée",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('Vue dégradée : participant-service signalé indisponible', () => pm.expect((pm.response.json().avertissements || []).join(' ')).to.include('participant-service'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/api/events/{{ev}}/details",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "events",
+                "{{ev}}",
+                "details"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

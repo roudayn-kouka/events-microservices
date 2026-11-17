@@ -1,0 +1,67 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<!-- Job « events-microservices » (phase 11). Installé par ci/installer-job.sh dans
+     /var/jenkins_home/jobs/events-microservices/ ; aucun autre job n'est modifié.
+     Source : le dépôt LOCAL, servi en lecture seule par le conteneur events-git (git daemon). -->
+<flow-definition plugin="workflow-job">
+  <description>Pipeline multi-services du projet events-microservices (DS Architecture des composants, FST GL5). Dépôt local en lecture seule (git://events-git/events-microservices), branche develop. PUSH_IMAGES et DEPLOY_AWS désactivés par défaut. Voir ci/README.md.</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty/>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.BooleanParameterDefinition>
+          <name>TOUT_RECONSTRUIRE</name>
+          <description>Ignorer la détection des changements</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>PUSH_IMAGES</name>
+          <description>Pousser les images sur Docker Hub</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>DEPLOY_AWS</name>
+          <description>Déployer sur l'EC2 (AWS-RUNBOOK.md)</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>TRIVY_BLOQUANT</name>
+          <description>Échouer si Trivy trouve une vulnérabilité CRITICAL corrigeable</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers>
+        <!-- En local : scrutation du dépôt toutes les 2 minutes (un commit déclenche un build).
+             Après le push : webhook GitHub (docs/APRES-PUSH.md). -->
+        <hudson.triggers.SCMTrigger>
+          <spec>H/2 * * * *</spec>
+          <ignorePostCommitHooks>false</ignorePostCommitHooks>
+        </hudson.triggers.SCMTrigger>
+      </triggers>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>git://events-git/events-microservices</url>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>*/develop</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions/>
+    </scm>
+    <scriptPath>Jenkinsfile</scriptPath>
+    <lightweight>false</lightweight>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

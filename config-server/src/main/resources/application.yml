@@ -1,0 +1,54 @@
+# Le Config Server ne lit pas sa propre configuration dans config-repo : il la porte ici.
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: composite
+  cloud:
+    config:
+      server:
+        composite:
+          # 1. Surcharges à chaud (scripts de panne) : prioritaires, jamais commitées
+          - type: native
+            search-locations: file:${CONFIG_OVERRIDES_DIR:${user.home}/events-microservices/config-overrides}
+          # 2. Configuration de référence : dossier config-repo/ du dépôt Git.
+          #    Chemin SANS « file: » : avec « file: », Spring Cloud Config travaille DANS le
+          #    dépôt source (checkout de la branche demandée dans le dossier de travail !).
+          #    Un chemin simple force un vrai clone JGit dans basedir.
+          - type: git
+            uri: ${CONFIG_GIT_URI:${user.home}/events-microservices}
+            basedir: ${java.io.tmpdir}/config-repo-clone
+            search-paths: config-repo
+            default-label: ${CONFIG_GIT_LABEL:develop}
+            clone-on-start: true
+            force-pull: true
+
+# Mêmes délais courts que config-repo/application.yml (le Config Server ne lit pas config-repo
+# pour lui-même) : réinscription en 5 s si Eureka redémarre (30 s par défaut).
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    initial-instance-info-replication-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${INSTANCE_ID:${random.value}}
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
