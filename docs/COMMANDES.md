@@ -247,7 +247,13 @@ Variables utiles : `S=http://localhost:8088/api/stats`. `$EV` est l'UUID d'un é
 | O8 | `python3 docker/grafana/generate_dashboards.py` | Régénérer les tableaux de bord | 3 fichiers JSON dans `docker/grafana/dashboards` |
 
 ## Swagger · Postman
-_Phase 7._
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| SW1 | http://localhost:8088/swagger-ui.html | Swagger agrégé | sélecteur des 5 services (statistics par défaut) ; « Try it out » via la Gateway (serveur `/api`) |
+| SW2 | `curl -s localhost:8088/docs/event-service/v3/api-docs \| jq -c '{openapi, serveur: .servers[0].url, chemins: (.paths \| length)}'` | OpenAPI d'un service via la Gateway | `3.1.0`, `/api` |
+| SW3 | `make newman` | Collection complète (environnement local) | 69 requêtes, 137 assertions, 0 échec |
+| SW4 | `make newman-pannes` | 5 pannes créées, vérifiées par Newman, rétablies | « les 5 scénarios de panne sont vérifiés par Newman » |
+| SW5 | Postman → Import `postman/*.json` ; environnement `aws.postman_environment.json` : remplacer `IP_PUBLIQUE_EC2` | Même collection sur AWS (phase 12) | — |
 
 ## Keycloak
 _Retiré du périmètre (2026-11-16) : voir THEORIE Q19._

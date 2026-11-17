@@ -19,7 +19,7 @@ Présentation individuelle. Fil rouge : **statistics-service est mon module** (c
 | 12 | Résilience4j | Configuration, fallbacks, 5 pannes, circuit OPEN → HALF_OPEN → CLOSED | C53 à C60 |
 | 13 | LoadBalancer | 2 instances, répartition 50 / 50 prouvée, bascule invisible, replay à 2 instances | C61 à C64 |
 | 14 | Observabilité | Prometheus (découverte Eureka), 3 tableaux de bord Grafana, trace Zipkin de bout en bout, alertes | C65 à C71 |
-| 15 | Swagger et Postman | API agrégées, collection | _phase 7_ |
+| 15 | Swagger et Postman | Swagger agrégé (sélecteur des 5 services), 69 requêtes Postman, 5 pannes vérifiées par Newman | C72 à C74 |
 | 16 | Sécurité (non implémentée, choix de périmètre) | Comment on sécuriserait la Gateway : OAuth2 / JWT (THEORIE Q19) | — |
 | 17 | Angular | Écrans, **dashboard statistiques** | _phase 9_ |
 | 18 | Qualité | Tests, JaCoCo ≥ 70 % sur statistics | _phase 10_ |

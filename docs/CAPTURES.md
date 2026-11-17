@@ -123,4 +123,10 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [ ] **C70 — traceId dans les logs** : commande O6. Visible : le même traceId que dans Zipkin.
 - [ ] **C71 — Alertes** : http://localhost:9091/alerts pendant la commande O7. Visible : `CircuitOuvert` « firing ».
 
+### Swagger et Postman (phase 7)
+
+- [ ] **C72 — Swagger agrégé** : http://localhost:8088/swagger-ui.html. Visible : le sélecteur des 5 services, puis un « Try it out » réussi.
+- [ ] **C73 — Newman, collection complète** : `make newman`. Visible : 69 requêtes, 0 échec.
+- [ ] **C74 — Newman, 5 pannes** : `make newman-pannes`. Visible : les 5 dossiers verts et le bilan.
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._

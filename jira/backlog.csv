@@ -8,7 +8,7 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 7,,Epic,Équilibrage de charge,"Spring Cloud LoadBalancer, 2 instances, preuve de répartition",High,loadbalancer,,Done
 8,,Epic,CQRS Axon,"Axon Server, EventAggregate, projections et requêtes dans statistics-service (mon module)",Highest,axon;cqrs,,To Do
 9,,Epic,Observabilité,"Micrometer, Prometheus, Grafana, Zipkin, alertes",High,observability,,Done
-10,,Epic,Documentation des API,"Swagger/OpenAPI agrégé dans la Gateway, collection Postman",High,swagger;postman,,To Do
+10,,Epic,Documentation des API,"Swagger/OpenAPI agrégé dans la Gateway, collection Postman",High,swagger;postman,,Done
 11,,Epic,Sécurité Keycloak,"Realm events, rôles ADMIN/USER, Gateway resource server, propagation du JWT — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak;security,,Won't Do
 12,,Epic,Frontend Angular,"Frontend de feature/feedback étendu : participants, logistique, dashboard statistiques, Keycloak",Medium,angular,,To Do
 13,,Epic,Qualité,"Handler global, validation, tests WireMock et AggregateTestFixture, JaCoCo >= 70 % sur statistics",High,quality;tests,,To Do
@@ -62,8 +62,8 @@ Issue Id,Parent Id,Issue Type,Summary,Description,Priority,Labels,Story Points,S
 61,9,Story,Dashboards Grafana provisionnés,"JVM, HTTP, Resilience4j (état du circuit), métriques métier",High,grafana,3,Done
 62,9,Story,Traçage Zipkin,Gateway -> service -> Feign ; traceId et spanId dans les logs,High,zipkin,2,Done
 63,9,Task,Alertes Prometheus,"Service down, circuit OPEN, latence p95 élevée",Medium,prometheus,1,Done
-64,10,Story,Swagger agrégé,"OpenAPI par service, sélecteur dans la Gateway",High,swagger,2,To Do
-65,10,Story,Collection Postman,Tous les endpoints et scénarios de panne ; environnements local et AWS,High,postman,2,To Do
+64,10,Story,Swagger agrégé,"OpenAPI par service, sélecteur dans la Gateway",High,swagger,2,Done
+65,10,Story,Collection Postman,Tous les endpoints et scénarios de panne ; environnements local et AWS,High,postman,2,Done
 66,11,Story,Realm Keycloak,"Realm events exporté et importé au démarrage, rôles ADMIN/USER — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak,2,Won't Do
 67,11,Story,Gateway resource server,"Validation JWT, règles par rôle — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19)",Medium,keycloak,2,Won't Do
 68,11,Task,Propagation du JWT,Relais du jeton par la Gateway et par Feign — retiré du périmètre le 2026-11-16 (sécurisation expliquée dans THEORIE Q19),Medium,keycloak;feign,1,Won't Do

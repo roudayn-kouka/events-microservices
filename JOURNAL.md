@@ -11,6 +11,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 4 — Resilience4j et pannes | 2026-11-16 19:46 | 2026-11-16 21:10 | 1 h 24 | 1 j | 4 mécanismes sur tous les appels Feign, fallbacks, Gateway 503, 5 pannes |
 | 5 — LoadBalancer | 2026-11-16 21:12 | 2026-11-16 21:40 | 28 min | 0,5 j | 2 instances, 50 / 50 Gateway et Feign, bascule sans erreur, replay à 2 instances |
 | 6 — Observabilité | 2026-11-16 21:42 | 2026-11-16 22:15 | 33 min | 1 j | Prometheus (Eureka), Grafana (3 tableaux), Zipkin (trace de bout en bout), 5 alertes |
+| 7 — Swagger et Postman | 2026-11-16 22:16 | 2026-11-16 22:55 | 39 min | 0,5 j | Swagger agrégé, 69 requêtes Postman, 5 pannes vérifiées par Newman |
 
 ## Phase 3 — CQRS Axon
 
@@ -70,6 +71,20 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   3. alerte `CircuitOuvert` invisible au bout de 10 s : OPEN ou HALF_OPEN.
 - **Observé, non corrigé** : 35 s après l'arrêt simultané des 2 instances de participant-service, Eureka en listait encore une. `ServiceAbsent` reste donc en attente pendant cette fenêtre ; `InstanceInjoignable` couvre ce cas.
 - **Vérifié** : 337 tests verts ; trace de 7 spans ; 11 cibles UP ; `make health` vert ; Newman 0 échec.
+
+## Phase 7 — Swagger et Postman
+
+- **Fait** :
+  - springdoc dans les 5 services (serveur `/api`, déclaré dans `common`) ;
+  - Swagger agrégé dans la Gateway (`/swagger-ui.html`, routes `/docs/<service>/v3/api-docs`) ;
+  - dossier OpenAPI dans Postman ;
+  - collection des pannes et `make newman-pannes` ; `make newman`.
+- **Problèmes et corrections** :
+  1. régression de la phase 5 : les scripts de panne n'agissaient que sur la première instance de participant-service. Ils agissent maintenant sur toutes ;
+  2. entre deux pannes, un circuit CLOSED pouvait encore contenir des échecs (3 sur 4, sous le minimum de 5) et s'ouvrir au premier échec suivant. Le script attend maintenant une fenêtre sans échec ;
+  3. mon script de diagnostic avait laissé la panne 3 active, faute de `trap` : rétabli à la main, et les diagnostics suivants ont un `trap`.
+- **Point ouvert** : un passage de `make newman-pannes` a reçu un 503 (3 tentatives, 1 s) sur la panne 3, alors que event-service journalisait « réponse incorrecte ». La panne 3 seule passe, et l'enchaînement complet est passé ensuite sans échec. La cause n'est pas établie avec certitude : piste à vérifier, une instance de participant-service redémarrée par la panne 1 et pas encore rafraîchie.
+- **Vérifié** : `make newman` 69 requêtes, 0 échec ; `make newman-pannes` 5 dossiers verts ; Swagger agrégé, 5 OpenAPI.
 
 ## Périmètre révisé (2026-11-16, à la demande)
 
