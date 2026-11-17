@@ -8,7 +8,7 @@ BRANCHE   := $(shell git branch --show-current)
 PROFILES  ?= --profile core
 
 .DEFAULT_GOAL := help
-.PHONY: help env build up restart down ps logs health seed panne repartition replay
+.PHONY: help env build up restart down ps logs health seed panne repartition replay newman newman-pannes
 
 help: ## Liste des commandes
 	@awk -F ':.*## ' '/^[a-z-]+:.*## / { printf "  make %-8s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -51,3 +51,11 @@ repartition: ## Mesure la répartition de charge entre les 2 instances (Gateway,
 
 replay: ## Replay coordonné de la projection CQRS de statistics-service (toutes les instances)
 	@bash scripts/replay.sh
+
+newman: ## Joue la collection Postman complète (Newman, via la Gateway)
+	@python3 postman/generate.py >/dev/null
+	@docker run --rm --network host -v "$(CURDIR)/postman:/etc/newman" postman/newman:6-alpine run events-microservices.postman_collection.json -e local.postman_environment.json
+
+newman-pannes: ## Les 5 pannes créées puis vérifiées par Newman, puis rétablies
+	@python3 postman/generate.py >/dev/null
+	@bash scripts/newman-pannes.sh

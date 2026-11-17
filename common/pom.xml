@@ -41,6 +41,12 @@
             <artifactId>micrometer-core</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Phase 7 : description OpenAPI commune (serveur /api, via la Gateway) -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <optional>true</optional>
+        </dependency>
         <!-- Phase 6 : transmettre le contexte de trace au thread du TimeLimiter -->
         <dependency>
             <groupId>io.micrometer</groupId>

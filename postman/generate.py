@@ -229,6 +229,36 @@ SERVICES = [
              "  else pm.expect(pm.response.json().message).to.include('make replay');\n});"),
         ],
     },
+    {
+        "nom": "Documentation OpenAPI (Swagger agrégé)",
+        "origine": "springdoc dans chaque service, sélecteur dans la Gateway (phase 7)",
+        "correspondance": [
+            ("(aucune documentation)", "http://localhost:8088/swagger-ui.html : un sélecteur pour les 5 services"),
+            ("(aucune documentation)", "GET /docs/<service>/v3/api-docs (OpenAPI 3.1, serveur /api)"),
+        ],
+        "requetes": [
+            ("OpenAPI de participant-service", "GET", "/docs/participant-service/v3/api-docs", None, 200,
+             "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n"
+             "  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n"
+             "  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"),
+            ("OpenAPI de logistics-service", "GET", "/docs/logistics-service/v3/api-docs", None, 200,
+             "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n"
+             "  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n"
+             "  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"),
+            ("OpenAPI de event-service", "GET", "/docs/event-service/v3/api-docs", None, 200,
+             "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n"
+             "  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n"
+             "  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"),
+            ("OpenAPI de feedback-service", "GET", "/docs/feedback-service/v3/api-docs", None, 200,
+             "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n"
+             "  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n"
+             "  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"),
+            ("OpenAPI de statistics-service", "GET", "/docs/statistics-service/v3/api-docs", None, 200,
+             "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n"
+             "  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n"
+             "  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"),
+        ],
+    },
 ]
 
 
@@ -247,7 +277,7 @@ def requete(nom, methode, chemin, corps, attendu, script_suite):
                      "pm.response.to.have.header('X-Instance-Id'));")
     if script_suite:
         tests.append(script_suite)
-    chemin_brut = "{{gateway}}" + chemin
+    chemin_brut = chemin if chemin.startswith("{{") else "{{gateway}}" + chemin
     item = {
         "name": nom,
         "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": tests}}],
@@ -258,7 +288,9 @@ def requete(nom, methode, chemin, corps, attendu, script_suite):
                     "path": [p for p in chemin.split("?")[0].split("/") if p]},
         },
     }
-    if "?" in chemin:
+    if chemin.startswith("{{"):  # URL directe d'un service (actuator), hors Gateway
+        item["request"]["url"] = chemin_brut
+    elif "?" in chemin:
         item["request"]["url"]["query"] = [
             {"key": k, "value": v} for k, v in (q.split("=", 1) for q in chemin.split("?", 1)[1].split("&"))]
     if corps is not None:
@@ -288,6 +320,47 @@ collection = {
 }
 
 
+# ----------------------------------------------------------------------------- pannes (phase 7)
+# Jouée par scripts/newman-pannes.sh (make newman-pannes) : le script CRÉE chaque panne, lance le
+# dossier correspondant, puis rétablit. Variables passées par le script : ev, part, participantActuator.
+AVERTI = ("pm.test('Vue dégradée : participant-service signalé indisponible', () => "
+          "pm.expect((pm.response.json().avertissements || []).join(' ')).to.include('participant-service'));")
+PANNES = [
+    ("Panne 1 — disponibilité (participant-service arrêté)", [
+        ("Lecture composée : dégradée (200 + avertissement)", "GET", "/api/events/{{ev}}/details", None, 200, AVERTI),
+        ("Inscription : refusée (503 explicite)", "POST", "/api/events/{{ev}}/participants/{{part}}", None, 503,
+         "pm.test('Fallback nommé', () => pm.expect(pm.response.json().message).to.include('participant-service'));"),
+    ]),
+    ("Panne 2 — temps de réponse > 5 s", [
+        ("Inscription : abandon par le TimeLimiter (504)", "POST", "/api/events/{{ev}}/participants/{{part}}", None, 504,
+         "pm.test('TimeLimiter 5 s', () => pm.expect(pm.response.json().message).to.include('TimeLimiter'));"),
+    ]),
+    ("Panne 3 — réponse incorrecte", [
+        ("Inscription : réponse rejetée (502)", "POST", "/api/events/{{ev}}/participants/{{part}}", None, 502,
+         "pm.test('Réponse incorrecte rejetée', () => pm.expect(pm.response.json().message).to.include('réponse incorrecte'));"),
+    ]),
+    ("Panne 4 — erreur réseau (URL mal configurée)", [
+        ("Lecture composée : dégradée (erreur réseau)", "GET", "/api/events/{{ev}}/details", None, 200,
+         "pm.test('Erreur réseau nommée', () => pm.expect((pm.response.json().avertissements || []).join(' ')).to.include('erreur réseau'));"),
+    ]),
+    ("Panne 5 — dépendance externe (base inaccessible)", [
+        ("Santé de participant-service : DOWN", "GET", "{{participantActuator}}/health", None, 503,
+         "pm.test('Composant db DOWN', () => pm.expect(pm.response.json().components.db.status).to.eql('DOWN'));"),
+        ("Lecture composée : dégradée", "GET", "/api/events/{{ev}}/details", None, 200, AVERTI),
+    ]),
+]
+collection_pannes = {
+    "info": {
+        "name": "Events FST — scénarios de panne",
+        "description": "Jouée par make newman-pannes : chaque dossier suppose la panne créée par le script.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    },
+    "item": [{"name": nom, "item": [requete(*r) for r in reqs]} for nom, reqs in PANNES],
+}
+(ICI / "events-pannes.postman_collection.json").write_text(
+    json.dumps(collection_pannes, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def environnement(nom, gateway):
     return {"name": nom, "values": [{"key": "gateway", "value": gateway, "type": "default", "enabled": True}],
             "_postman_variable_scope": "environment"}
@@ -303,3 +376,4 @@ def environnement(nom, gateway):
     encoding="utf-8")
 total = sum(len(s["requetes"]) for s in SERVICES)
 print(f"Collection générée : {len(SERVICES)} dossier(s), {total} requête(s).")
+print(f"Collection des pannes : {len(PANNES)} dossier(s), {sum(len(r) for _, r in PANNES)} requête(s).")

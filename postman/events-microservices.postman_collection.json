@@ -2242,6 +2242,172 @@
           }
         }
       ]
+    },
+    {
+      "name": "Documentation OpenAPI (Swagger agrégé)",
+      "description": "**Documentation OpenAPI (Swagger agrégé)** — repris de `springdoc dans chaque service, sélecteur dans la Gateway (phase 7)`.\n\n### Ancien endpoint → nouvel endpoint via la Gateway\n\n| Monolithe (/events, port 8089) | Microservices (via la Gateway, port 8088) |\n|---|---|\n| `(aucune documentation)` | `http://localhost:8088/swagger-ui.html : un sélecteur pour les 5 services` |\n| `(aucune documentation)` | `GET /docs/<service>/v3/api-docs (OpenAPI 3.1, serveur /api)` |",
+      "item": [
+        {
+          "name": "OpenAPI de participant-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/participant-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "participant-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI de logistics-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/logistics-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "logistics-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI de event-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/event-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "event-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI de feedback-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/feedback-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "feedback-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI de statistics-service",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Réponse produite par le service (X-Instance-Id)', () => pm.response.to.have.header('X-Instance-Id'));",
+                  "pm.test('OpenAPI 3, serveur /api (Try it out via la Gateway)', () => {\n  pm.expect(pm.response.json().openapi).to.match(/^3\\./);\n  pm.expect(pm.response.json().servers[0].url).to.eql('/api');\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway}}/docs/statistics-service/v3/api-docs",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "docs",
+                "statistics-service",
+                "v3",
+                "api-docs"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [

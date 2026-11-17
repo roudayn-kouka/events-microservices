@@ -41,23 +41,37 @@ appel() { # <méthode> <chemin> [corps]
   rm -f "$sortie"
 }
 
-# Surcharge à chaud : écrit config-overrides/<service>.yml puis rafraîchit le service
-surcharger() { # <service> <url actuator> <contenu YAML>
-  printf '%s\n' "$3" > "config-overrides/$1.yml"
+# Conteneurs en cours d'exécution d'un service (phase 5 : participant-service et sa 2e instance)
+conteneurs_de() { # <service>
+  docker compose ps --services --status running | grep -E "^$1(-2)?$" || true
+}
+
+# Ports actuator de toutes les instances en cours d'exécution d'un service
+actuators_de() { # <service>
+  case "$1" in
+    participant-service)
+      echo "$PARTICIPANT_ACTUATOR"
+      if conteneurs_de participant-service | grep -qx participant-service-2; then echo "http://localhost:8112/actuator"; fi
+      ;;
+    event-service) echo "$EVENT_ACTUATOR" ;;
+  esac
+}
+
+# Surcharge à chaud : écrit config-overrides/<service>.yml puis rafraîchit TOUTES ses instances
+surcharger() { # <service> <contenu YAML>
+  printf '%s\n' "$2" > "config-overrides/$1.yml"
   info "config-overrides/$1.yml : $(tr '\n' ' ' < "config-overrides/$1.yml")"
-  rafraichir "$2"
+  for url in $(actuators_de "$1"); do rafraichir "$url"; done
 }
 
 # Retour à la normale : écrire d'abord une valeur NEUTRE puis rafraîchir, et seulement ensuite
 # supprimer le fichier. Constaté en phase 4 : si on supprime directement le fichier, le refresh
 # du client (spring.config.import) répond [] et garde l'ancienne source de propriétés jusqu'au
 # prochain redémarrage — la panne resterait active.
-retirer_surcharge() { # <service> <url actuator> <contenu YAML neutre>
-  printf '%s
-' "$3" > "config-overrides/$1.yml"
-  info "valeur neutre : $(tr '
-' ' ' < "config-overrides/$1.yml")"
-  rafraichir "$2"
+retirer_surcharge() { # <service> <contenu YAML neutre>
+  printf '%s\n' "$2" > "config-overrides/$1.yml"
+  info "valeur neutre : $(tr '\n' ' ' < "config-overrides/$1.yml")"
+  for url in $(actuators_de "$1"); do rafraichir "$url"; done
   rm -f "config-overrides/$1.yml"
   info "config-overrides/$1.yml retiré"
 }

@@ -18,6 +18,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). Ce README est complété à chaq
 | 4 | Resilience4j (Retry, RateLimiter, CircuitBreaker, TimeLimiter), fallbacks, 5 pannes (`make panne N=1..5`) | Terminée |
 | 5 | LoadBalancer : 2 instances de participant et de statistics, `make repartition`, `make replay` | Terminée |
 | 6 | Observabilité : Prometheus (découverte Eureka), Grafana (3 tableaux de bord), Zipkin, alertes | Terminée |
+| 7 | Swagger agrégé, Postman (local et AWS), `make newman`, `make newman-pannes` | Terminée |
 
 ## Prérequis
 
