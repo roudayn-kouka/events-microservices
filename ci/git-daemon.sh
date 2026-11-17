@@ -18,9 +18,9 @@ case "${1:-start}" in
     elif docker ps -a --format '{{.Names}}' | grep -qx "$NOM"; then
       docker start "$NOM" >/dev/null && echo "$NOM redémarré"
     else
+      docker build -q -t events/git-daemon:local "$RACINE/ci/git-daemon" >/dev/null
       docker run -d --name "$NOM" --restart unless-stopped --network "$RESEAU" -p 9418:9418 \
-        --user "$(id -u):$(id -g)" -v "$RACINE:/git/events-microservices:ro" \
-        alpine/git:v2.49.1 daemon --reuseaddr --export-all --base-path=/git --informative-errors /git >/dev/null
+        --user "$(id -u):$(id -g)" -v "$RACINE:/git/events-microservices:ro" events/git-daemon:local >/dev/null
       echo "$NOM démarré : git://events-git/events-microservices (réseau $RESEAU), git://localhost:9418/events-microservices"
     fi
     ;;
