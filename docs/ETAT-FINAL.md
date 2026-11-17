@@ -183,3 +183,33 @@ Total : **337 tests verts**. Vérifié en réel :
 - traceId dans les logs, y compris dans le thread du TimeLimiter ;
 - alertes : `CircuitOuvert` « firing » pendant une panne, 5 règles saines ;
 - `make health` vert (contrôles d'observabilité ajoutés) ; Newman 64 requêtes, 0 échec.
+
+## Correctif du circuit du cron (après la phase 7)
+
+| Module | Avant | Après | Ajoutés |
+|---|---:|---:|---|
+| common | 20 | 22 | 2 : les échecs d'un traitement de fond ouvrent `participant-service-batch` et laissent le circuit des utilisateurs CLOSED ; hors traitement de fond, retour au circuit des utilisateurs |
+
+Total : **339 tests verts**. `make newman-pannes` 3 fois de suite, 0 échec. Pendant ces passages, le cron a croisé 5 pannes, dont la panne 3.
+
+## Phase 9 — Frontend Angular : tests et vérifications
+
+- 10 tests Vitest (`make front-test`) : routes de la Gateway, en-têtes `X-Stats-Source` et `X-Instance-Id`, messages des fallbacks, calcul des graphiques.
+- `make e2e` (Chromium, Playwright) : 13 contrôles. Création de participant, d'événement (commande Axon) et de logistique ; inscription par Feign ; refus métier 400 dans l'écran Avis ; nettoyage ; aucune erreur JavaScript ni réponse 5xx.
+- Vue dégradée affichée dans l'UI pendant l'arrêt des 2 instances de participant-service.
+
+## Phase 10 — Qualité : seuil JaCoCo bloquant
+
+Règle dans le POM parent (`jacoco:check` à la phase `verify`, `haltOnFailure`) : **lignes ≥ 70 % et branches ≥ 60 %** pour chaque service métier. Seuils surchargeables : `-Djacoco.minimum.lignes=…`.
+
+| Service | Lignes | Branches | Instructions |
+|---|---:|---:|---:|
+| ⭐ statistics-service | 97,7 % | 87,5 % | 96,9 % |
+| event-service | 95,8 % | 88,9 % | 95,9 % |
+| participant-service | 96,0 % | 83,3 % | 97,7 % |
+| logistics-service | 88,6 % | 90,0 % | 94,2 % |
+| feedback-service | 96,6 % | 97,1 % | 97,1 % |
+
+Preuve que le seuil est bloquant : `mvn -pl statistics-service -am verify -Djacoco.minimum.lignes=0.99` donne `BUILD FAILURE` (« lines covered ratio is 0.97, but expected minimum is 0.99 »).
+Le handler d'exceptions global (`common`) et les DTO `@Valid` existent depuis les phases 2 et 4 (ticket 72). Les tests WireMock (ticket 73) ne sont pas faits : les clients Feign sont testés par un faux service distant (`ClientsResilientsTest`) et, en réel, par les 5 pannes vérifiées par Newman.
+

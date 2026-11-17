@@ -22,6 +22,8 @@ Convention de commit : `type(portée): message EVT-xx`, avec `type` ∈ feat, fi
 
 ## Maven
 
+_Phase 10 : `mvn verify` applique un seuil JaCoCo **bloquant** (lignes ≥ 70 %, branches ≥ 60 %). Commandes Q1 et Q2 ci-dessous._
+
 | # | Commande | Rôle | Résultat |
 |---|---|---|---|
 | M1 | `mvn -B validate` | Vérifie le POM parent et résout les BOM Spring Cloud 2025.0.3 et Axon 4.13.3 | `BUILD SUCCESS` |
@@ -267,6 +269,13 @@ _Retiré du périmètre (2026-11-16) : voir THEORIE Q19._
 | NG4 | `make e2e` | Parcours complet dans Chromium (Playwright) : création, inscription Feign, règle métier, nettoyage | 13 contrôles `OK` ; captures dans `frontend/e2e/captures` |
 | NG5 | `docker compose stop participant-service participant-service-2`, ouvrir un événement [Démo] dans l'UI, puis `docker compose --profile core start participant-service participant-service-2` | Vue dégradée visible dans l'UI | bandeau « Vue dégradée : participants indisponible : … » |
 | NG6 | `cd frontend && npm start` (Node requis) | Serveur de développement, proxy `/api` vers 8088 | http://localhost:4200 |
+
+## Qualité (JaCoCo)
+| # | Commande | Rôle | Résultat |
+|---|---|---|---|
+| Q1 | `mvn -B verify \| grep -E "jacoco.*check\|coverage checks"` | Seuil JaCoCo appliqué à chaque service | 5 × « All coverage checks have been met. » |
+| Q2 | `mvn -B -pl statistics-service -am verify -Djacoco.minimum.lignes=0.99` | Preuve que le seuil bloque | `BUILD FAILURE` : « lines covered ratio is 0.97, but expected minimum is 0.99 » |
+| Q3 | `statistics-service/target/site/jacoco/index.html` | Rapport de couverture de mon module | 97,7 % des lignes, 87,5 % des branches |
 
 ## Jenkins · SonarQube · Trivy
 _Phase 11._

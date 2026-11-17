@@ -14,6 +14,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 7 — Swagger et Postman | 2026-11-16 22:16 | 2026-11-16 22:55 | 39 min | 0,5 j | Swagger agrégé, 69 requêtes Postman, 5 pannes vérifiées par Newman |
 | Correctif — circuit du cron | 2026-11-17 11:40 | 2026-11-17 12:35 | 55 min | — | circuit `participant-service-batch` pour le cron, 3 × `newman-pannes` verts |
 | 9 — Frontend Angular (allégé) | 2026-11-17 12:37 | 2026-11-17 12:48 | 11 min (+ ~25 min préparées pendant les runs Newman) | 0,5 à 1 j | 5 écrans via la Gateway, graphiques SVG, `make e2e` 13/13 |
+| 10 — Seuil JaCoCo bloquant | 2026-11-17 12:48 | 2026-11-17 12:53 | 5 min | 0,5 j (réduite à un commit) | `jacoco:check` lignes ≥ 70 %, branches ≥ 60 %, preuve du blocage |
 
 ## Phase 3 — CQRS Axon
 
@@ -118,6 +119,15 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   3. données laissées par un passage e2e interrompu : supprimées par l'API (participant 29, un événement « Atelier UI »).
 - **Vérifié** : 10 tests Vitest ; build de 101 ko compressé ; `make e2e` 13/13 avec nettoyage ; vue dégradée affichée pendant l'arrêt de participant-service ; `make health` vert (avec le frontend) ; `make newman` 69 requêtes, 0 échec.
 - **Non fait (périmètre)** : connexion Keycloak (ticket 71 « Won't Do »).
+
+## Phase 10 — Seuil JaCoCo bloquant (un seul commit)
+
+- **Début** : 2026-11-17 12:48 — **fin** : 12:53 — **durée réelle** : 5 min.
+- **Fait** : exécution `jacoco:check` dans le POM parent (phase `verify`, `haltOnFailure`), avec lignes ≥ 70 % et branches ≥ 60 % dans chaque service métier ; seuils en propriétés Maven.
+- **Constat** : la couverture était déjà de 88 à 98 % (lignes) dans les 5 services. Aucun test n'a été ajouté pour franchir le seuil.
+- **Vérifié** : `mvn verify` vert, 5 × « All coverage checks have been met » ; avec un seuil de 99 %, statistics-service échoue (`BUILD FAILURE`, 0,97 < 0,99) ; `make health` vert.
+- **Tickets** : 72 (handler global et `@Valid`, déjà en place) et 74 « Done » ; 73 (WireMock) « Won't Do », justification dans ETAT-FINAL.
+- **Tags** : `v0.6.0` posé après coup sur la fusion de la phase 6 (le plan le prévoyait, il manquait) et `v0.10.0` sur cette fusion.
 
 ## Périmètre révisé (2026-11-16, à la demande)
 

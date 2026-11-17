@@ -137,4 +137,10 @@ Les **mêmes commandes** (ST5, ST6, ST8) ont été relancées à la phase 3 (val
 - [ ] **C78 — Règle métier dans l'UI** : écran Avis, un événement futur. Visible : « Event has not finished (HTTP 400) ».
 - [ ] **C79 — make e2e** : terminal. Visible : les 13 contrôles `OK` du parcours Playwright.
 
+### Qualité (phase 10)
+
+- [ ] **C80 — Seuil JaCoCo respecté** : commande Q1. Visible : les 5 « All coverage checks have been met. ».
+- [ ] **C81 — Seuil JaCoCo bloquant** : commande Q2. Visible : `Rule violated … 0.97, but expected minimum is 0.99` et `BUILD FAILURE`.
+- [ ] **C82 — Rapport de couverture** : commande Q3 dans le navigateur. Visible : la couverture de statistics-service par paquet.
+
 _Les captures des phases suivantes sont ajoutées à la fin de chaque phase._
