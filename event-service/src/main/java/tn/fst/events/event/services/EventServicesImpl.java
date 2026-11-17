@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import tn.fst.events.common.resilience.ClientsResilients;
 import tn.fst.events.event.clients.LogisticsClient;
 import tn.fst.events.event.clients.LogisticsDTO;
 import tn.fst.events.event.clients.ParticipantClient;
@@ -149,11 +150,16 @@ public class EventServicesImpl implements IEventServices {
                 .toList();
     }
 
-    /** Toutes les 60 s dans le monolithe ; cron réglable (désactivé dans les tests : « - »). */
+    /**
+     * Toutes les 60 s dans le monolithe ; cron réglable (désactivé dans les tests : « - »).
+     * Traitement de fond : ses appels Feign passent par les circuits « participant-service-batch »
+     * et « logistics-service-batch », sans Retry. Une panne vue par le cron n'ouvre donc pas le
+     * circuit des requêtes des utilisateurs (constaté en phase 7 : 503 au lieu de 502, panne 3).
+     */
     @Scheduled(cron = "${events.cout.cron:0 * * * * *}")
     public void calculCoutPlanifie() {
         try {
-            calculCout();
+            ClientsResilients.enTraitementDeFond(this::calculCout);
         } catch (ResponseStatusException e) {
             log.warn("calculCout reporté : {}", e.getReason());
         }
