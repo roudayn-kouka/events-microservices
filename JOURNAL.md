@@ -12,6 +12,7 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
 | 5 — LoadBalancer | 2026-11-16 21:12 | 2026-11-16 21:40 | 28 min | 0,5 j | 2 instances, 50 / 50 Gateway et Feign, bascule sans erreur, replay à 2 instances |
 | 6 — Observabilité | 2026-11-16 21:42 | 2026-11-16 22:15 | 33 min | 1 j | Prometheus (Eureka), Grafana (3 tableaux), Zipkin (trace de bout en bout), 5 alertes |
 | 7 — Swagger et Postman | 2026-11-16 22:16 | 2026-11-16 22:55 | 39 min | 0,5 j | Swagger agrégé, 69 requêtes Postman, 5 pannes vérifiées par Newman |
+| Correctif — circuit du cron | 2026-11-17 11:40 | 2026-11-17 12:35 | 55 min | — | circuit `participant-service-batch` pour le cron, 3 × `newman-pannes` verts |
 
 ## Phase 3 — CQRS Axon
 
@@ -85,6 +86,21 @@ Heures locales (Tunis). Les durées réelles sont mesurées de la fin de la phas
   3. mon script de diagnostic avait laissé la panne 3 active, faute de `trap` : rétabli à la main, et les diagnostics suivants ont un `trap`.
 - **Point ouvert** : un passage de `make newman-pannes` a reçu un 503 (3 tentatives, 1 s) sur la panne 3, alors que event-service journalisait « réponse incorrecte ». La panne 3 seule passe, et l'enchaînement complet est passé ensuite sans échec. La cause n'est pas établie avec certitude : piste à vérifier, une instance de participant-service redémarrée par la panne 1 et pas encore rafraîchie.
 - **Vérifié** : `make newman` 69 requêtes, 0 échec ; `make newman-pannes` 5 dossiers verts ; Swagger agrégé, 5 OpenAPI.
+
+## Correctif après la phase 7 — 503 au lieu de 502 sur la panne 3
+
+- **Début** : 2026-11-17 11:40 (nouvelle session) — **fin** : 12:35 — **durée réelle** : 55 min.
+- **Captures** : C44 à C74 réalisées par l'utilisatrice, cochées (commit `422824f`). État vérifié ensuite : `make health` vert, `config-overrides/` vide (README seul), tous les circuits CLOSED, 2 instances UP.
+- **Diagnostic** (échantillonnage de `/actuator/circuitbreakers` toutes les 0,5 s pendant `make newman-pannes`, 503 reproduit au premier passage) :
+  - l'hypothèse « circuit resté OPEN ou HALF_OPEN après le scénario précédent » est **réfutée** : CLOSED, 0 échec, au début de la panne 3 ;
+  - cause : le cron `calculCout` (seconde :00) appelait participant-service pendant la panne. Ses 3 tentatives (le Retry enveloppe le circuit) faisaient 3 échecs, et l'inscription de Newman 2 de plus : le minimum de 5 était atteint, le circuit s'ouvrait et la 3e tentative recevait 503 « circuit ouvert ».
+- **Premier correctif, remplacé** : `hors_cron` dans les scripts (attendre que la panne ne croise pas :00). Il corrigeait Newman, mais pas une démo manuelle (Postman, Angular). L'utilisatrice a demandé de corriger la cause : `hors_cron` est retiré.
+- **Correctif retenu** (isolation par cas d'usage, THEORIE Q28) : `ClientsResilients.enTraitementDeFond(...)`. Le cron utilise les instances `participant-service-batch` et `logistics-service-batch` (CircuitBreaker et RateLimiter), sans Retry ; le TimeLimiter reste celui du service.
+- **Incident pendant la vérification** : un 3e passage a échoué à la panne 4, parce que **mes propres `curl` d'exploration de l'API** (dont `/details`) tombaient pendant la panne. Zipkin le montre : deux `/details` simultanés à 11:09:05 UTC. Les vérifications suivantes se sont faites sans aucun appel en parallèle.
+- **Vérifié** :
+  - 339 tests verts, dont 2 nouveaux : les échecs du batch laissent le circuit utilisateur CLOSED à 0 échec ;
+  - `make newman-pannes` 3 fois de suite, 0 échec. Pendant ces passages, le cron a croisé 5 pannes, dont la panne 3 (journal : `participant-service-batch : réponse incorrecte, rejetée`), sans effet sur les tests ;
+  - `make newman` : 69 requêtes, 137 assertions, 0 échec ; `make health` vert.
 
 ## Périmètre révisé (2026-11-16, à la demande)
 
