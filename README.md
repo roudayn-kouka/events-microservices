@@ -7,6 +7,20 @@ Module mis en avant : **statistics-service** (côté requêtes CQRS).
 
 Plan détaillé : [docs/PLAN.md](docs/PLAN.md). État final : [docs/ETAT-FINAL.md](docs/ETAT-FINAL.md).
 
+## Architecture
+
+<p align="center">
+  <img src="docs/images/architecture-events-microservices.gif" alt="Architecture Events FST : Angular, API Gateway, 5 microservices avec une base MySQL chacun, Axon Server (CQRS), Config Server, Eureka, observabilité Prometheus/Grafana/Zipkin, CI/CD Jenkins/SonarQube/Trivy et déploiement AWS Terraform + Ansible" width="100%">
+</p>
+
+- **Entrée** : Angular (nginx :4200, proxy `/api`) → **API Gateway** (:8088, routes `lb://`).
+- **5 microservices métier** : event (commandes, agrégat), participant (Feign, 2 instances), logistics (réservations, coût), feedback (notes, avis) et **statistics** (requêtes CQRS, 2 instances), chacun avec **sa propre base MySQL** (:3307).
+- **Bus CQRS** : Axon Server (:8024) — bus de commandes, d'événements, de requêtes et event store.
+- **Socle** : Config Server (:8888, config-repo Git) et Eureka (:8761, annuaire).
+- **Observabilité** : Prometheus (:9091, 11 cibles, 5 alertes), Grafana (:3001, 3 tableaux de bord), Zipkin (:9411, traces Micrometer/Brave).
+- **CI/CD et qualité** : Jira (89 tickets), GitHub (`v1.0.0`), Jenkins (étapes parallèles), SonarQube (quality gate A), Trivy, Docker.
+- **Cloud AWS** : Terraform (VPC, SG, EC2) + Ansible (Docker et stack) vers une EC2 t3.large, prêts à déployer.
+
 ## État d'avancement
 
 | Phase | Contenu | État |
@@ -51,6 +65,7 @@ Plan détaillé : [docs/PLAN.md](docs/PLAN.md). État final : [docs/ETAT-FINAL.m
 | [APRES-PUSH](docs/APRES-PUSH.md) | Publication GitHub, webhook Jenkins, Docker Hub |
 | [AWS-RUNBOOK](docs/AWS-RUNBOOK.md) | Déploiement sur l'EC2 et destruction |
 | [JOURNAL](JOURNAL.md) | Heures réelles, problèmes et corrections, phase par phase |
+| [Schéma d'architecture](docs/images/architecture-events-microservices.gif) | Vue d'ensemble animée de l'architecture (GIF) |
 
 ## Prérequis
 
@@ -122,4 +137,5 @@ events-microservices/
 ├── infra/aws/              Terraform (EC2), Ansible, make aws-up / aws-down (phase 12)
 ├── jira/                   Backlog importable (EVT-1 à EVT-89)
 └── docs/                   Plan, commandes, captures, théorie, scénario, présentation, après-push, AWS, état final
+    └── images/             architecture-events-microservices.gif (schéma d'architecture)
 ```
